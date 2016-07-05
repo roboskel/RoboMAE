@@ -1,0 +1,100 @@
+2. Semi- automatic Multimodal Annotation 
+
+The Multimodal Annotation Tool, implemented in Matlab, can be used for multimodal annotation. It visualizes the different 
+modality data recorded from the robot's different sensors. The user is able to see the data frome each sensor at any time, as 
+Multimodal Annotation Tool synchronizes different modality data. The different modalities that can be depixted by this tool are 
+sound (.wav files), image (.rgb files), laser scan data and depth data from the Kinect depth sensor. The aim of this tool is to fuse these
+different modalities in order to annotate a video stream. The user (or annotator) can use multiple functioonalities of the tool to complete an
+annotation task with semi-automatic techniques, semi- supervised methods nad functionalities to perform a convenient annotation. The annotation 
+tool is implemented in a way to be both user-friendly and accurate. 
+The way we represent the data is the following: On the sound axis, we plot the  sound file in a 2- second window, where the user is able to hear the spicific audio segment. 
+The image file is depicted as an rgb image, the depth file is a 2D array, depicted as a image too, and the laser scan file is an array that represents the 
+distance of an object/ human on each angle from 60 to 120 degrees. There are two ways to show the laser scan representation. The first one 
+is on angles and the other one is by transforming polar to cartesian co-ordinates and creating a pseudo- 2D image depicting the floor plan 
+of the current video frame. This toggle is user's choice performed by the toggle button.
+The user can move the main slider in order to see the different modalities on each video frame. Visualization is the one basic part of this tool. The 
+other one is the annotation functionality. The annotator can annotate the speakers on the video in any of these modalities. In the RGB image, the user can either 
+use a face detection button to detect faces in the frame or to draw by themselves a bounding box on each speaker's face. The user has the option to choose between eight speakers
+(Speaker1, Speaker2, ..., Speaker8) or renaming the speakers' names for more convenience. The basic annotation is the RGB annotation. Having this, the annotator can 
+annotate a specific audio segment to a speaker and a specific area on the laser scan. 
+The safest way to complete an annotation task is to follow a fully- manual annotation. That means that the user has to draw bounding boxes on each frame, 
+on each audio segment and on each laser scan plot resulting in spending too much time. This is the main reason we integrated this basic visualization/ annotation tool with 
+several techniques, such as interpolation, face detection, face tracking, a semi-supervised speaker diarization method, image projection methods and other techniques from
+image and audio analysis. 
+The annotator can check and correct the annotations (automatic or manual) by using the specific buttons (remove, edit, zoom undo etc.). After completing an annotation task, 
+the annotation data can be exported in order to be used for real-time annotation systems training.
+
+4.1.Semi Automatic Multimodal Annotation
+
+As covered before, the Multimodal Annotatio Tool uses techniques to help the annotator complete an annotation task easier and accurate. 
+The tool has been implemented with Matlab Graphical User Interfaces (GUI). Each button is a callback to a specific function. In this section we will refer to these functions
+and the background of each one.
+
+- Face Detection : uses the Viola - Jones algorithm as mentioned in ...
+- Speaker diarization : Speaker diarization is perfomrmed by using a Fisher Linear Semi-Discriminant Analysis for Speaker Diarization (Thodoris papaer). This method 
+uses a few audio segments, manually annotated by the user, and output a fully annotated audio signal. After the audio annotation, the tool 
+visualizes the annotated signal, used for corrections or confirmation by the user.
+- Interpolation : The annotator can complete the annotation session in a manual way. The interpolation technique can help the annotator to fill out the video frames with bounding boxes.
+In general,  interpolation is a method of constructing new data points within the range of a discrete set of known data points. One often has a number of data points, obtained by sampling or experimentation, 
+which represent the values of a function for a limited number of values of the independent variable. 
+It is often required to interpolate (i.e. estimate) the value of that function for an intermediate value of the independent variable. 
+Specifically, the user can annotate some certain frames, as known frames, and use cubic interpolation to annotate the intermediate frames. 
+It is obvious that interpolation needs many frames to be annotated in order to perform well. In addition, the annotator must choose the 'correct' basic frames, 
+considering frames that contain abrupt movements, or direction alteration e.t.c. 
+Face Tracking : Mean Shift Algorithm 
+Image projection : The Kinect depth sensor : An infrared (IR) emitter and an IR depth sensor. The emitter emits infrared light beams and the depth sensor reads the IR beams reflected back to the sensor. The reflected beams are converted into depth 
+information measuring the distance between an object and the sensor. This makes capturing a depth image possible.
+Each depth image value depicts the distance from the sensor to the specific point. In order to associate it with the laser scan output, we projected the bottom of the depth image
+to the horizontal axis. That means that if the projection function has a small value according to its neighbor region, there is an object to this area. 
+Taking advantage of this "similarity" between the laser scanner and the depth sensor, we define a mapping function that projects each point of the 
+projected depth image to the laser scan plot. The user is available to click either onthe projection or on the depth image and select an area, which is 
+projected on the laser scan plot. 
+
+
+
+datasets
+
+For our experiments and our evaluation we recorded various scenarios including different cases. We used different scenarios for each dataset. 
+Some of the recording were "scripted" and other were more natural. Scripted scenarios do not contain voice or human overlapping, whereas more natural
+scenarios are harder to been annotated, due to these issues. For our experimental evaluation we used both of these scenarios. The matrix below
+describes the recordings used or the evaluation. 
+
+				DURATION (sec)   No. of Speakers    Description
+Scenario A		     90					3			 scripted
+
+Scenario B			 350				3			 overlapping conversation 	
+												     and speakers
+													 
+Scenario C			 86					3			 overlapping conversation 
+													 in noisy environment
+													 
+													 
+In the scenario A, two of the three speakers start the conversation and the third one enters the conversation. n the other two scenarios
+the speakers have an overlapping conversation while they change positions. In scenario C, there is noisy environment, but the seakers do not 
+change positions. 
+
+Evaluation 
+
+In order to evaluate our experiments, we annotated these 3 scearios in two levels. First, the annotation was completed manually, using interpolation for a few 
+frames. Then, we used the techniques we proposed to repeat the annotation task. The table belows shows the annotation session timing. 
+
+				Manual annotation 		Semi-automatic Annotation 
+Scenario A 			94 mins						13 mins
+Scenario B 			100 mins					30 mins
+Scenario C			40 mins						19 mins
+
+There are two quantities we evaluated during the experiments. The first one deals with the recall and precision of the tracking against the manual 
+rgb annotation. The second one refers to the semi- automatic speakers diariazation. The results are shown below:
+
+
+					Tracking 				Speaker Diarization 
+				recall    precise			recall 		precise
+Scenario A		0.758	   0.757
+Scenario B		0.540      0.541
+Scenario C		0.612	   0.610
+
+
+
+
+ 
+

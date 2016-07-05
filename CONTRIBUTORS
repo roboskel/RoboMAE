@@ -1,0 +1,9 @@
+
+Version 1.0, July 2013
+
+The first version of RoboMAE was developed, almost exclusively by
+Konstantinos Tsiakas, from Spring 2013 up until and including the 4th
+International Research-based Summer School (IRSS 2013), July 2013,
+NCSR "Demokritos". It incorporates the earlier speaker diarization
+system by Giannakopoulos and Petridis (2012) and third-party libraries
+under the BSD license.
