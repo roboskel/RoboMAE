@@ -1,0 +1,20 @@
+Version 2.0, September 2016
+
+During Summer 2016 RoboMAE was re-written from scratch by Eleni
+Diamantidou, Dimitrios Mallios, and Eleutheria Kotsoni during their
+internship at Roboskel, NCSR "Demokritos", supervised by Theodoros
+Giannakopoulos. Dimitris Sgouropoulos supported the integration of
+their components in the context of H2020 RADIO. Georgios Stavrinos
+supported with his ROS expertise.
+
+
+
+Version 1.0, July 2013
+tag: refs/tags/v1.0
+
+The first version of RoboMAE was developed, almost exclusively by
+Konstantinos Tsiakas, from Spring 2013 up until and including the 4th
+International Research-based Summer School (IRSS 2013), July 2013,
+NCSR "Demokritos". It incorporates the earlier speaker diarization
+system by Giannakopoulos and Petridis (2012) and third-party libraries
+under the BSD license.

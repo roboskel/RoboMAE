@@ -1,0 +1,4 @@
+{
+"basiclabels":["sit","walk", "stand","lying"],
+"highlevellabels":["eating","watching tv","pick up pill"]
+}
