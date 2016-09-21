@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import os
+import csv
 import cv2
 import yaml
 from termcolor import colored
@@ -73,9 +75,9 @@ def buffer_video_csv(csv_file):
                 if 'Class' not in row_1:
                     for row in csv_reader:
                         (rec_id,x, y, width, height) = map(int, row[index:index + 5])
-                        (meter_X,meter_Y,meter_Z,top,meter_h,distance) = map(float, row[(index+5)::])
-                        box_buff.append((rec_id,x, y, width, height))
-                        metrics.append((meter_X,meter_Y,meter_Z,top,meter_h,distance))
+                        (meter_X, meter_Y, meter_Z, top,meter_h, distance) = map(float, row[(index+5)::])
+                        box_buff.append((rec_id, x, y, width, height))
+                        metrics.append((meter_X, meter_Y, meter_Z, top, meter_h, distance))
                 else:
                     for row in csv_reader:
                         (rec_id, x, y, width, height) = map(int, row[index:index + 5])
