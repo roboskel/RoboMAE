@@ -71,24 +71,28 @@ from laser import graphicalInterfaceLaser as gL
 
 from gui import rosbagGui
 
+global bagFile
+global csvFile
 global frameCounter
 global start_point
 global end_point
 global boxInitialized
 global annotationColors
 global eventColors
-global gantEnabled
 global posSlider
 global xBoxCoord
 global BasicTopics
+global classLabels
+global highLabels
 
+bagFile = None
+csvFile = None
 frameCounter = 0
 start_point = False
 end_point = False
 boxInitialized = False
 annotationColors = ['#00FF00', '#FF00FF','#FFFF00','#00FFFF','#FFA500','#C0C0C0','#000000','#EAEAEA']
 eventColors = ['#9fbf1f','#087649','#0a5b75','#181a8d','#7969b0','#76a9ea','#bef36e','#edfa84','#f18ed2','#753e20']
-gantEnabled = False
 posSlider = 0
 xBoxCoord = []
 #Declare the basic topics for the topic box
@@ -163,10 +167,9 @@ class VideoWidgetSurface(QAbstractVideoSurface):
             self.stop()
             return False
         else:
+            
+            frameCounter += 1
             self.currentFrame = frame
-            print frameCounter, len(player.time_buff)
-            if frameCounter < len(player.time_buff):
-                frameCounter += 1
             removeBool = True #Removes the boxes on current frame
             self.widget.repaint(self.targetRect)
             return True
@@ -179,6 +182,7 @@ class VideoWidgetSurface(QAbstractVideoSurface):
         size.scale(self.widget.size().boundedTo(size), Qt.KeepAspectRatio)
         self.targetRect = QRect(QPoint(0, 0), size);
         self.targetRect.moveCenter(self.widget.rect().center())
+       
 
     def paint(self, painter):
         if (self.currentFrame.map(QAbstractVideoBuffer.ReadOnly)):
@@ -193,17 +197,18 @@ class VideoWidgetSurface(QAbstractVideoSurface):
                     self.currentFrame.bytesPerLine(),
                     self.imageFormat
             )
-
             painter.drawImage(self.targetRect, image, self.sourceRect)
             painter.setTransform(oldTransform)
-
             self.currentFrame.unmap()
+           
+            
 
 
 class VideoWidget(QWidget):
 
     def __init__(self, parent=None):
         global classLabels
+        global highLabels
         super(VideoWidget, self).__init__(parent)
         self.setAutoFillBackground(False)
         self.setAttribute(Qt.WA_NoSystemBackground, True)
@@ -235,7 +240,6 @@ class VideoWidget(QWidget):
         global posY
         global classLabels
         global gantChart
-        global gantEnabled
         global highLabels
         global frameCounter
         
@@ -326,8 +330,6 @@ class VideoWidget(QWidget):
         self.annotEnabled = False
         self.stopEventEnabled = False
 
-        #print player.videobox[frameCounter].annotation
-        #gantEnabled = True
         gantChart.axes.clear()
         gantChart.drawChart(player.videobox, framerate)
         gantChart.draw()
@@ -368,6 +370,7 @@ class VideoWidget(QWidget):
                 if posX > x and posX < (x+w) and posY > y and posY < (y+h):
                     if not rectPainter.isActive():
                         rectPainter.begin(self)
+                    rectPainter.setRenderHint(QPainter.Antialiasing)
                     rectPainter.setPen(Qt.red)
                     rectPainter.drawRect(x,y,w,h)
                     rectPainter.end()
@@ -383,6 +386,7 @@ class VideoWidget(QWidget):
                         x,y,w,h = player.videobox[frameCounter].box_Param[j]
                         if not rectPainter.isActive():
                             rectPainter.begin(self)
+                        rectPainter.setRenderHint(QPainter.Antialiasing)
                         rectPainter.setPen(QColor(self.getColorBox(player.videobox[frameCounter].annotation[j])))
                         rectPainter.drawRect(x,y,w,h)
                         rectPainter.end()
@@ -401,6 +405,7 @@ class VideoWidget(QWidget):
                 x,y,w,h = player.videobox[frameCounter].box_Param[i]
                 if not rectPainter.isActive():
                     rectPainter.begin(self)
+                rectPainter.setRenderHint(QPainter.Antialiasing)
                 rectPainter.setPen(Qt.red)
                 rectPainter.drawRect(x,y,w,h)
                 rectPainter.end()
@@ -421,7 +426,7 @@ class VideoWidget(QWidget):
                 if posX > x and posX < (x+w) and posY > y and posY < (y+h):
                     if not rectPainter.isActive():
                         rectPainter.begin(self)
-                        
+                    rectPainter.setRenderHint(QPainter.Antialiasing)    
                     if self.annotClass in highLabels:
                         rectPainter.setPen(QColor(self.getColorBox(player.videobox[frameCounter].annotation[i])))
                     else:
@@ -440,6 +445,7 @@ class VideoWidget(QWidget):
                 else:
                     if not rectPainter.isActive():
                         rectPainter.begin(self)
+                    rectPainter.setRenderHint(QPainter.Antialiasing)
                     rectPainter.setPen(QColor(self.getColorBox(player.videobox[frameCounter].annotation[i])))
                     rectPainter.drawRect(x,y,w,h)
                     rectPainter.end()
@@ -483,6 +489,7 @@ class VideoWidget(QWidget):
                     x,y,w,h = player.videobox[frameCounter].box_Param[i]
                     if not rectPainter.isActive():
                             rectPainter.begin(self)
+                    rectPainter.setRenderHint(QPainter.Antialiasing)
                     rectPainter.setPen(QColor(self.getColorBox(player.videobox[frameCounter].annotation[i])))
                     rectPainter.drawRect(x,y,w,h)
                     rectPainter.end()
@@ -495,11 +502,11 @@ class VideoWidget(QWidget):
 
         #Play the bound boxes from csv
         elif len(player.videobox) > 0 and frameCounter < len(player.time_buff):
-            print player.videobox[frameCounter].timestamp
             for i in range(len(player.videobox[frameCounter].box_Id)):
                 x,y,w,h = player.videobox[frameCounter].box_Param[i]
                 if not rectPainter.isActive():
-                    rectPainter.begin(self)
+                    rectPainter.begin(self)    
+                rectPainter.setRenderHint(QPainter.Antialiasing)    
                 rectPainter.setPen(QColor(self.getColorBox(player.videobox[frameCounter].annotation[i])))
                 rectPainter.drawRect(x,y,w,h)
                 rectPainter.end()
@@ -512,7 +519,8 @@ class VideoWidget(QWidget):
 
         if rectPainter.isActive():
             rectPainter.end()
-
+        
+    
     #Mouse callback handling Boxes
     def mousePressEvent(self,event):
         global start_point
@@ -642,80 +650,96 @@ class VideoPlayer(QWidget):
     def __init__(self, parent=None):
         global gantChart, Topics
         super(VideoPlayer, self).__init__(parent)
-        self.videobox = []
-        self.time_ = 0
         self.mediaPlayer = QMediaPlayer(None, QMediaPlayer.VideoSurface)
-        #self.setWindowFlags(self.windowFlags() | QtCore.Qt.CustomizeWindowHint)
-        #self.setWindowFlags( (self.windowFlags() | Qt.CustomizeWindowHint) & ~Qt.WindowMaximizeButtonHint)
-        Topics = None
-
-        self.box_buffer = []
-        self.metric_buffer = []
+        
+        Topics              = None
+        self.time_          = 0
+        self.duration       = 0
+        self.message_count  = 0
+        self.videobox       = []
+        self.box_buffer     = []
+        self.metric_buffer  = []
+        self.time_buff      = []
 
         self.topic_window = rosbagGui.TopicBox()
+        
         # >> DEFINE WIDGETS OCJECTS
         # >> VIDEO - DEPTH - AUDIO - LASER - GANTT CHART
         #----------------------
         self.videoWidget = VideoWidget()
         self.laserScan = gL.LS()
 
-        # >> LASER
-        #Define Laser Buttons
-        scanLayout = QHBoxLayout()
-        scanLayout.addWidget(self.laserScan)
-        # >> Video Gantt Chart
+        #Set Fix Size at Video Widget and LaserScan
+        self.laserScan.setFixedSize(640, 480)
+        self.videoWidget.setFixedSize(640, 480)
+
+        #Video buttons
+        videoLayout = self.createVideoButtons()
+        
+        #Video Gantt Chart
         self.gantt = videoGantChart.gantShow()
         gantChart = self.gantt
         gantChart.axes.get_xaxis().set_visible(False)
-        gantChart.setFixedSize(1300, 120)
+        gantChart.setFixedSize(1300, 90)
+        
+        #Create Slider
+        self.createSlider()
+        
+        #Laser buttons
+        scanLayout = QHBoxLayout()
+        scanLayout.addWidget(self.laserScan)
+        layoutLaser = self.createLaserButtons(scanLayout)
+        
+        self.controlEnabled = False
+
+        #Specify video-laser layout align
+        laserAndVideoLayout = QHBoxLayout()
+        laserAndVideoLayout.addLayout(videoLayout)
+        laserAndVideoLayout.addLayout(layoutLaser)
+
+        #Audio Player buttons
+        buttonLayoutAudio = self.createAudioButtons()
+        waveLayout = self.createAudio()
+        
+        
+        self.mainLayout = QVBoxLayout()
+        self.mainLayout.addLayout(laserAndVideoLayout)
+        self.mainLayout.addWidget(self.positionSlider)
+        self.mainLayout.addWidget(self.gantt)
+        self.mainLayout.addLayout(waveLayout)
+        self.mainLayout.addLayout(buttonLayoutAudio)
+
+        self.setLayout(self.mainLayout)
+
+        self.mediaPlayer.setVideoOutput(self.videoWidget.videoSurface())
+        self.mediaPlayer.stateChanged.connect(self.mediaStateChanged)
+        self.mediaPlayer.positionChanged.connect(self.positionChanged)
+        self.mediaPlayer.durationChanged.connect(self.durationChanged)
+
+        
+    
+    def createSlider(self):
+        self.positionSlider = QSlider(Qt.Horizontal)
+        self.positionSlider.setMinimum(0)
+        self.positionSlider.setMaximum(audioGlobals.duration)
+        self.positionSlider.setTickInterval(1)
+        self.positionSlider.sliderMoved.connect(self.setPosition)
+
+        #add label to slider about elapsed time
+        self.label_tmp = '<b><FONT SIZE=3>{}</b>'
+        self.timelabel = QLabel(self.label_tmp.format('Time: ' + str(audioGlobals.duration)))
 
 
-        # >> Define Audio annotations and gantt chart
-        #----------------------
-        self.wave = vA.Waveform()
-        audioGlobals.fig = self.wave
-        self.wave.axes.get_xaxis().set_visible(False)
-        self.wave.draw()
-        self.wave.setFixedSize(1300, 175)
-
-        self.chart = gA.Chart()
-        audioGlobals.chartFig = self.chart
-        self.chart.setFixedSize(1300, 85)
-        playButtonLaser = QPushButton("Play")
-        pauseButtonLaser = QPushButton("Pause")
-        prevFrameButtonLaser = QPushButton("Previous")
-        nextFrameButtonLaser = QPushButton("Next")
-        stopButtonLaser = QPushButton("Stop")
-
-
-
-        buttonLayoutLaser = QHBoxLayout()
-        buttonLayoutLaser.addWidget(playButtonLaser)
-        buttonLayoutLaser.addWidget(pauseButtonLaser)
-        buttonLayoutLaser.addWidget(prevFrameButtonLaser)
-        buttonLayoutLaser.addWidget(nextFrameButtonLaser)
-        buttonLayoutLaser.addWidget(stopButtonLaser)
-        buttonLayoutLaser.setAlignment(Qt.AlignLeft)
-
-
-        #Define Connections
-        playButtonLaser.clicked.connect(self.laserPlay)
-        pauseButtonLaser.clicked.connect(self.laserPause)
-        prevFrameButtonLaser.clicked.connect(self.laserPrevious)
-        nextFrameButtonLaser.clicked.connect(self.laserNext)
-        stopButtonLaser.clicked.connect(self.laserStop)
-
-        # >> Set Fix Size at Video Widget and LaserScan
-        # >> (Half Gui)
-        self.laserScan.setFixedSize(640, 480)
-        self.videoWidget.setFixedSize(640, 480)
-        self.openButton = QPushButton("Open...")
-        self.importCsv = QPushButton("Import CSV...")
-        self.openButton.clicked.connect(self.openFile)
-        self.importCsv.clicked.connect(self.openCsv)
-
-        # >> most important play button
-        #----------------------
+        self.label = QHBoxLayout()
+        self.label.addWidget(self.timelabel)
+        self.label.setAlignment(Qt.AlignRight)
+        
+    def createVideoButtons(self):
+        
+        verticalLine 	=  QFrame()
+        verticalLine.setFrameStyle(QFrame.VLine)
+        verticalLine.setSizePolicy(QSizePolicy.Minimum,QSizePolicy.Expanding)
+        
         self.playButton = QPushButton()
         self.playButton.setEnabled(False)
         self.playButton.setIcon(self.style().standardIcon(QStyle.SP_MediaPlay))
@@ -731,103 +755,31 @@ class VideoPlayer(QWidget):
         self.depthButton = QRadioButton("Depth")
         self.depthButton.toggled.connect(self.depth)
         self.depthButton.setEnabled(False)
-
-        self.positionSlider = QSlider(Qt.Horizontal)
-        #self.positionSlider.setRange(0, audioGlobals.duration)
-        self.positionSlider.setMinimum(0)
-        self.positionSlider.setMaximum(audioGlobals.duration)
-        self.positionSlider.setTickInterval(1)
-        self.positionSlider.sliderMoved.connect(self.setPosition)
-
-        #add label to slider about elapsed time
-        self.label_tmp = '<b><FONT SIZE=3>{}</b>'
-        self.timelabel = QLabel(self.label_tmp.format('Time: ' + str(audioGlobals.duration)))
-
-
-        self.label = QHBoxLayout()
-        self.label.addWidget(self.timelabel)
-        self.label.setAlignment(Qt.AlignRight)
-
+        
+        self.previousButton = QPushButton()
+        self.previousButton.setIcon(self.style().standardIcon(QStyle.SP_MediaSeekBackward))
+        self.previousButton.clicked.connect(self.previousFrame)
+        self.nextButton = QPushButton()
+        self.nextButton.setIcon(self.style().standardIcon(QStyle.SP_MediaSeekForward))
+        self.nextButton.clicked.connect(self.nextFrame)
+        
+        
+        
+        
+        
         self.controlLayout = QHBoxLayout()
-        self.controlLayout.addWidget(self.openButton)
-        self.controlLayout.addWidget(self.importCsv)
         self.controlLayout.addWidget(self.playButton)
+        self.controlLayout.addWidget(self.previousButton)
+        self.controlLayout.addWidget(self.nextButton)
         self.controlLayout.addWidget(self.rgbButton)
         self.controlLayout.addWidget(self.depthButton)
         self.controlLayout.setAlignment(Qt.AlignLeft)
-        #self.controlLayout.addStretch(1)
-        self.controlEnabled = False
-
         videoLayout = QVBoxLayout()
-        #videoLayout.addStretch(1)
         videoLayout.addWidget(self.videoWidget)
         videoLayout.addLayout(self.controlLayout)
-
-        self.controlLaser = QHBoxLayout()
-        self.controlLaser.addLayout(buttonLayoutLaser)
-        self.controlLaser.addLayout(self.label)
-
-
-
-        # >> Define Audio Player buttons
-        #----------------------
-        playButtonAudio = QPushButton("Play")
-        pauseButtonAudio = QPushButton("Pause")
-        stopButtonAudio = QPushButton("Stop")
-
-
-        # >> Define Audio layouts
-        #----------------------
-        waveLayout = QVBoxLayout()
-        waveLayout.addWidget(self.wave)
-        waveLayout.addWidget(self.chart)
-
-
-        # >> Laser Buttons Layout
-        #----------------------
-        buttonLayoutAudio = QHBoxLayout()
-        buttonLayoutAudio.addWidget(playButtonAudio)
-        buttonLayoutAudio.addWidget(pauseButtonAudio)
-        buttonLayoutAudio.addWidget(stopButtonAudio)
-        buttonLayoutAudio.setAlignment(Qt.AlignLeft)
-
-
-        laserClass = QHBoxLayout()
-        laserClass.addLayout(scanLayout)
-        #laserClass.setAlignment(Qt.AlignTop)
-
-        layoutLaser = QVBoxLayout()
-        #layoutLaser.addStretch(1)
-        layoutLaser.addLayout(laserClass)
-        layoutLaser.addLayout(self.controlLaser)
-        #layoutLaser.setAlignment(Qt.AlignBottom)
-
-        # >> Specify final layout align
-        #----------------------
-        laserAndVideoLayout = QHBoxLayout()
-        laserAndVideoLayout.addLayout(videoLayout)
-        laserAndVideoLayout.addLayout(layoutLaser)
-
-        mainLayout = QVBoxLayout()
-        mainLayout.addLayout(laserAndVideoLayout)
-        mainLayout.addWidget(self.positionSlider)
-        mainLayout.addWidget(self.gantt)
-        mainLayout.addLayout(waveLayout)
-        mainLayout.addLayout(buttonLayoutAudio)
-
-        self.setLayout(mainLayout)
-
-        self.mediaPlayer.setVideoOutput(self.videoWidget.videoSurface())
-        self.mediaPlayer.stateChanged.connect(self.mediaStateChanged)
-        self.mediaPlayer.positionChanged.connect(self.positionChanged)
-        self.mediaPlayer.durationChanged.connect(self.durationChanged)
-
-        # >> Player Buttons
-        #----------------------
-        playButtonAudio.clicked.connect(self.audioPlay)
-        pauseButtonAudio.clicked.connect(self.audioPause)
-        stopButtonAudio.clicked.connect(self.audioStop)
-
+        
+        return videoLayout
+        
     def pauseMedia(self):
         self.mediaPlayer.pause()
         self.Pause()
@@ -857,7 +809,6 @@ class VideoPlayer(QWidget):
         global frameCounter
 
         if enabled:
-
             self.rgbEnable = False
             self.depthEnable = True
             position = self.mediaPlayer.position()
@@ -871,9 +822,63 @@ class VideoPlayer(QWidget):
             if self.topic_window.temp_topics[3][1] != 'Choose Topic':
                 self.laserPlay()
             self.playButton.setEnabled(True)
-
+    
+    def previousFrame(self):
+        global frameCounter
+        if frameCounter > 0:
+            frameCounter -= 2
+            print frameCounter
+            pos = round(((frameCounter ) * (self.duration * 1000)) / self.message_count)
+            self.mediaPlayer.setPosition(pos) 
+        
+    def nextFrame(self):
+        global frameCounter
+        if frameCounter < self.message_count:
+            pos = round(((frameCounter ) * (self.duration * 1000)) / self.message_count)
+            self.mediaPlayer.setPosition(pos) 
+        
     # AUDIO PLAYER BUTTON FUNCTIONS
+    
+    def createAudio(self):
+        #Define Audio annotations and gantt chart
+        self.wave = vA.Waveform()
+        audioGlobals.fig = self.wave
+        self.wave.axes.get_xaxis().set_visible(False)
+        self.wave.draw()
+        self.wave.setFixedSize(1300, 175)
+        
+        self.chart = gA.Chart()
+        audioGlobals.chartFig = self.chart
+        self.chart.setFixedSize(1300, 90)
+        
+        #Audio layouts
+        waveLayout = QVBoxLayout()
+        waveLayout.addWidget(self.wave)
+        waveLayout.addWidget(self.chart)
+        
+        return waveLayout
+        
+    def createAudioButtons(self):
+        playButtonAudio = QPushButton("Play")
+        pauseButtonAudio = QPushButton("Pause")
+        stopButtonAudio = QPushButton("Stop")
 
+        playButtonAudio.clicked.connect(self.audioPlay)
+        pauseButtonAudio.clicked.connect(self.audioPause)
+        stopButtonAudio.clicked.connect(self.audioStop)
+        
+        playButtonAudio.setIcon(self.style().standardIcon(QStyle.SP_MediaPlay))
+        pauseButtonAudio.setIcon(self.style().standardIcon(QStyle.SP_MediaPause))
+        stopButtonAudio.setIcon(self.style().standardIcon(QStyle.SP_MediaStop))
+        
+        buttonLayoutAudio = QHBoxLayout()
+        buttonLayoutAudio.addWidget(playButtonAudio)
+        buttonLayoutAudio.addWidget(pauseButtonAudio)
+        buttonLayoutAudio.addWidget(stopButtonAudio)
+        buttonLayoutAudio.setAlignment(Qt.AlignLeft)
+        
+        return buttonLayoutAudio
+       
     # >> Play audio (whole signal or segment)
     #----------------------
     def audioPlay(self):
@@ -928,7 +933,6 @@ class VideoPlayer(QWidget):
     def checkPositionToStop(self):
         self.time_ = self.player.position()
         #self.positionSlider.setValue(self.time_/1000)
-        #print self.time_
         if self.time_ >= self.end:
             self.audioStop()
             self.player.setPosition(self.start)
@@ -936,7 +940,50 @@ class VideoPlayer(QWidget):
 
 
     # >> LASER BUTTON FUNCTIONS
+    def createLaserButtons(self, scanLayout):
+        
+        playButtonLaser      = QPushButton()
+        stopButtonLaser      = QPushButton()
+        pauseButtonLaser     = QPushButton()
+        prevFrameButtonLaser = QPushButton()
+        nextFrameButtonLaser = QPushButton()
+        
+        playButtonLaser.setIcon(self.style().standardIcon(QStyle.SP_MediaPlay))
+        stopButtonLaser.setIcon(self.style().standardIcon(QStyle.SP_MediaStop))
+        pauseButtonLaser.setIcon(self.style().standardIcon(QStyle.SP_MediaPause))
+        prevFrameButtonLaser.setIcon(self.style().standardIcon(QStyle.SP_MediaSeekBackward))
+        nextFrameButtonLaser.setIcon(self.style().standardIcon(QStyle.SP_MediaSeekForward))
 
+        buttonLayoutLaser = QHBoxLayout()
+        buttonLayoutLaser.addWidget(playButtonLaser)
+        buttonLayoutLaser.addWidget(pauseButtonLaser)
+        buttonLayoutLaser.addWidget(prevFrameButtonLaser)
+        buttonLayoutLaser.addWidget(nextFrameButtonLaser)
+        buttonLayoutLaser.addWidget(stopButtonLaser)
+        buttonLayoutLaser.setAlignment(Qt.AlignLeft)
+
+
+        #Define Connections
+        playButtonLaser.clicked.connect(self.laserPlay)
+        pauseButtonLaser.clicked.connect(self.laserPause)
+        prevFrameButtonLaser.clicked.connect(self.laserPrevious)
+        nextFrameButtonLaser.clicked.connect(self.laserNext)
+        stopButtonLaser.clicked.connect(self.laserStop)
+        
+        self.controlLaser = QHBoxLayout()
+        self.controlLaser.addLayout(buttonLayoutLaser)
+        self.controlLaser.addLayout(self.label)
+        
+        
+        laserClass = QHBoxLayout()
+        laserClass.addLayout(scanLayout)
+
+        layoutLaser = QVBoxLayout()
+        layoutLaser.addLayout(laserClass)
+        layoutLaser.addLayout(self.controlLaser)
+        
+        return layoutLaser
+    
     def laserPlay(self):
         self.laserScan.ptime()
         laserGlobals.scan_widget = self.laserScan
@@ -977,9 +1024,16 @@ class VideoPlayer(QWidget):
         global depthFileName
         global rgbFileName
         global Topics
-        self.time_buff  = []
+        global classLabels
+        global highLabels
         start_time = None
-
+        
+        #Parse json file
+        try:
+            classLabels, highLabels = self.parseJson()
+        except:
+            self.errorMessages(3)
+                  
         fileName,_ = QFileDialog.getOpenFileName(self, "Open Bag", QDir.currentPath(),"(*.bag)")
 
         # create a messsage box for get or load data info
@@ -1019,8 +1073,6 @@ class VideoPlayer(QWidget):
                     rgbFileName = fileName.replace(".bag","_RGB.avi")
                     (self.message_count, compressed, framerate) = rosbagVideo.buffer_video_metadata(bag, self.topic_window.temp_topics[2][1])
                     
-                    #Initialize objects which are equal to frames
-                    self.videobox = [boundBox(count) for count in range(self.message_count)]    
                         
                     if os.path.isfile(rgbFileName):
                         print colored('Loaded RGB video', 'yellow')
@@ -1036,6 +1088,11 @@ class VideoPlayer(QWidget):
                         (image_buffer, self.time_buff) = rosbagRGB.buffer_rgb_data(bag, self.topic_window.temp_topics[2][1], compressed)
                         rosbagRGB.write_rgb_video(rgbFileName, image_buffer, framerate)
                         
+                    (framerate, self.message_count, self.duration) = rosbagRGB.video_metadata(rgbFileName)
+                    
+                    #Initialize objects which are equal to frames
+                    self.videobox = [boundBox(count) for count in range(int(self.message_count))]    
+                    
                 except:
                     self.errorMessages(8)
                 
@@ -1084,7 +1141,7 @@ class VideoPlayer(QWidget):
 
     #Open CSV file
     def openCsv(self):
-        global classLabels,gantEnabled,highLabels
+        global framerate
         self.box_buffer = []
         self.metric_buffer = []
 
@@ -1097,32 +1154,24 @@ class VideoPlayer(QWidget):
         else:
             self.box_buffer = [list(elem) for elem in box_buff]
             self.metric_buffer = [list(key) for key in metrics_buff]
-
             #Frame counter initialize
-            counter = -1
+            counter = 0
             if len(box_action) > 0:
                 self.box_actionBuffer = [key for key in box_action]
-                for idx,key in enumerate(self.box_buffer):
+                for idx, key in enumerate(self.box_buffer):
                     if key[0] == 0:
                         counter += 1
                         self.videobox[counter].addBox(self.time_buff[counter], key, self.box_actionBuffer[idx])
                     else:
                         self.videobox[counter].addBox(self.time_buff[counter], key, self.box_actionBuffer[idx])
             else:
-                for idx,key in enumerate(self.box_buffer):
+                for idx, key in enumerate(self.box_buffer):
                     if key[0] == 0:
                         counter += 1
                         self.videobox[counter].addBox(self.time_buff[counter], key, ['Clear'])
                     else:
                         self.videobox[counter].addBox(self.time_buff[counter], key, ['Clear'])
-            print counter
-            #Parse json file
-            try:
-                classLabels, highLabels = self.parseJson()
-            except:
-                self.errorMessages(3)
-
-            gantEnabled = True
+            
             gantChart.axes.clear()
             gantChart.drawChart(self.videobox, framerate)
             gantChart.draw()
@@ -1201,8 +1250,7 @@ class VideoPlayer(QWidget):
         # >> Get slider position for bound box
         posSlider = self.positionSlider.value()
         #self.tickLabel.setAlignment(posSlider)
-        frameCounter = int(round(self.message_count * posSlider/(self.duration * 1000)))
-        print "play ", frameCounter
+        frameCounter = int(round((self.message_count * posSlider)/(self.duration * 1000)))
 
     def mediaStateChanged(self, state):
         if state == QMediaPlayer.PlayingState:
@@ -1234,9 +1282,9 @@ class VideoPlayer(QWidget):
 
 
     def setPosition(self, position):
-        global frameCounter, posSlider
+        global frameCounter
+        global posSlider
         frameCounter = int(round(self.message_count * position/(self.duration * 1000)))
-        print "setPos ", frameCounter
         posSlider = position
         if (self.topic_window.temp_topics[2][1] != 'Choose Topic') or (self.topic_window.temp_topics[1][1] != 'Choose Topic'):
             self.mediaPlayer.setPosition(position)
@@ -1399,13 +1447,42 @@ class boundBox(object):
             x1 = x1 + math.radians(105)
             x2 = x2 + math.radians(105)
 
+
+class MainWindow(QMainWindow):
+    global bagFile
+    global csvFile
+    def __init__(self, player):
+        super(MainWindow, self).__init__()
+        
+        self.setCentralWidget(player)
+        
+        self.createActions()
+        
+        self.fileMenu = self.menuBar().addMenu("&File")
+        self.fileMenu.addAction(self.openBagAct)
+        self.fileMenu.addAction(self.openCsvAct)
+        
+    
+    def createActions(self):
+        self.openBagAct = QAction("&Open rosbag", self, shortcut=QKeySequence.New,
+            statusTip="Open rosbag", triggered=self.openBag)
+        self.openCsvAct = QAction("&Open csv", self, shortcut=QKeySequence.New,
+            statusTip="Open csv", triggered=self.openCSV)
+        
+    def openBag(self):
+        player.openFile()
+        
+    def openCSV(self):
+        player.openCsv()
+        
 if __name__ == '__main__':
     os.system('cls' if os.name == 'nt' else 'clear')
     app = QApplication(sys.argv)
-
+    
     player = VideoPlayer()
-    #player.setFixedSize(1300,1025)
-    player.show()
+    main = MainWindow(player)
+    main.show()
+    #main.setFixedSize(1300,1000)
 
     app.exec_()
     try:

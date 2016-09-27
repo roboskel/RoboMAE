@@ -82,8 +82,8 @@ def buffer_video_csv(csv_file):
                     for row in csv_reader:
                         (rec_id, x, y, width, height) = map(int, row[index:index + 5])
                         (meter_X, meter_Y, meter_Z, top, meter_h, distance) = map(float, row[(index+6)::])
-                        box_buff.append((rec_id, x, y, width, height))
-                        if  isinstance(row[index+5],str):
+                        box_buff.append((timestamp, rec_id, x, y, width, height))
+                        if  isinstance(row[index+5], str):
                             string = row[index+5]
                             if string.startswith('[') and string.endswith(']'):
                                 #Transform a string of list to list
@@ -127,3 +127,12 @@ def write_rgb_video(rgbFileName, image_buffer, framerate):
             video_writer.write(frame)
         video_writer.release()
     print colored('Video writen successfully', 'yellow')
+    
+    
+def video_metadata(rgbFileName):
+    cap = cv2.VideoCapture(rgbFileName)
+    fps = round(cap.get(cv2.cv.CV_CAP_PROP_FPS))
+    count = round(cap.get(cv2.cv.CV_CAP_PROP_FRAME_COUNT))
+    duration = count/fps
+       
+    return fps, count, duration
