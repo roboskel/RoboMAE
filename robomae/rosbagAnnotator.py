@@ -1047,11 +1047,12 @@ class VideoPlayer(QWidget):
     #Open CSV file
     def openCsv(self):
         global framerate
+        global bagFile
         self.box_buffer = []
         self.metric_buffer = []
-
+        
         # OPEN VIDEO - DEPTH - AUDIO
-        fileName,_ =  QFileDialog.getOpenFileName(self, "Open Csv ", QDir.currentPath(),"(*.csv)")
+        fileName,_ =  QFileDialog.getOpenFileName(self, "Open Csv ", os.path.dirname(os.path.abspath(bagFile)),"(*.csv)")
         box_buff, metrics_buff, box_action = rosbagRGB.buffer_video_csv(fileName)
 
         if not (box_buff or metrics_buff):
