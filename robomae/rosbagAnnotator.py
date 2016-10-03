@@ -74,8 +74,6 @@ from gui import rosbagGui
 global bagFile
 global csvFile
 global frameCounter
-global start_point
-global end_point
 global boxInitialized
 global annotationColors
 global eventColors
@@ -88,13 +86,13 @@ global highLabels
 bagFile = None
 csvFile = None
 frameCounter = 0
-start_point = False
-end_point = False
 boxInitialized = False
 annotationColors = ['#00FF00', '#FF00FF','#FFFF00','#00FFFF','#FFA500','#C0C0C0','#000000','#EAEAEA']
 eventColors = ['#9fbf1f','#087649','#0a5b75','#181a8d','#7969b0','#76a9ea','#bef36e','#edfa84','#f18ed2','#753e20']
 posSlider = 0
 xBoxCoord = []
+classLabels = []
+highLabels = []
 #Declare the basic topics for the topic box
 
 
@@ -216,6 +214,9 @@ class VideoWidget(QWidget):
         self.setSizePolicy(QSizePolicy.MinimumExpanding ,
         QSizePolicy.MinimumExpanding)
         self.surface = VideoWidgetSurface(self)
+        self.start_point = False
+        self.end_point = False
+        self.vanishBox = False
         self.vanishBox = False
         self.enableWriteBox = False
         self.annotEnabled = False
@@ -225,8 +226,25 @@ class VideoWidget(QWidget):
         self.buttonLabels = []
         self.addEventLabels = []
         self.stopEventLabels = []
-        classLabels = []
-        highLabels = []
+        
+        
+        self.menu = QMenu(self)
+        self.clear = self.menu.addAction('Clear')
+        
+
+        for i in classLabels:
+            self.buttonLabels.append(self.menu.addAction(i))
+            
+        self.deleteBox = self.menu.addAction('Delete Box')
+        self.deleteAll = self.menu.addAction('Delete All Boxes')
+        self.addEvent = self.menu.addMenu('Add Event')
+        self.stopEvent = self.menu.addMenu('Stop Event')
+        self.changeId = self.menu.addAction('Change Id')
+        self.cancel = self.menu.addAction('Cancel')
+        
+         #Initiate add Event menu
+        for label in highLabels:
+            self.addEventLabels.append(self.addEvent.addAction(label))
 
     def videoSurface(self):
         return self.surface
@@ -245,101 +263,90 @@ class VideoWidget(QWidget):
         self.addEventEnabled = False
 
         if event.reason() == QContextMenuEvent.Mouse:
-            menu = QMenu(self)
-            clear = menu.addAction('Clear')
-
+            
             posX = event.pos().x()
             posY = event.pos().y()
-
-            for i in classLabels:
-                self.buttonLabels.append(menu.addAction(i))
-
-            deleteBox = menu.addAction('Delete Box')
-            deleteAllBoxes = menu.addAction('Delete All Boxes')
-            addEvent = menu.addMenu('Add Event')
-            stopEvent = menu.addMenu('Stop Event')
-            stopEvent.setEnabled(False)
+            x = None
+            y = None
+            w = None
+            h = None
+            box_id = None
+            self.stopEvent.setEnabled(False)
             #Show only annotated high classes of the box
-            for i in range(len(player.videobox[frameCounter].box_Id)):
+            for i in range(len(player.videobox[frameCounter].box_id)):
                 x,y,w,h = player.videobox[frameCounter].box_Param[i]
                 if posX > x and posX < (x+w) and posY > y and posY < (y+h):
-                    box_id = player.videobox[frameCounter].box_Id.index(i)
-                    if len(player.videobox[frameCounter].annotation) > 0:
-                        for annot in player.videobox[frameCounter].annotation[box_id]:
-                            if annot in highLabels and annot not in self.checkStopEventMenu:
-                                self.checkStopEventMenu.append(annot)
-                                self.stopEventLabels.append(stopEvent.addAction(annot))
-                                stopEvent.setEnabled(True)
-            #Initiate add Event menu
-            for label in highLabels:
-                self.addEventLabels.append(addEvent.addAction(label))
-            changeId = menu.addAction('Change Id')
-            cancel = menu.addAction('Cancel')
-            action = menu.exec_(self.mapToGlobal(event.pos()))
-
-            #Check which submenu clicked
-            if action is not None:
-                if action.parent() == addEvent:
-                    self.addEventEnabled = True
-                elif action.parent() == stopEvent:
-                    self.stopEventEnabled = True
-
-            if self.addEventEnabled:
-                for index, key in enumerate(self.addEventLabels):
-                    if action == key:
-                        self.annotClass = highLabels[index]
-                        self.annotEnabled = True
-                        self.addEventEnabled = False
-
-            elif self.stopEventEnabled:
-                for index, key in enumerate(self.stopEventLabels):
-                    if action == key:
-                        player.videobox[frameCounter].removeEvent(box_id,self.stopEventLabels[index].text() )
-                        self.stopEventEnabled = False
-
-            for i,key in enumerate(self.buttonLabels):
-                if action == key:
-                    self.annotClass = classLabels[i]
-                    self.annotEnabled = True
-            if action == deleteBox:
-                self.deleteEnabled = True
-            elif action ==  deleteAllBoxes:
-                self.deleteAllBoxes = True
-            elif action == changeId:
-                #Call the textbox
-                self.newBoxId = rosbagGui.textBox(player.videobox, posX, posY, frameCounter, gantChart, framerate)
-                self.newBoxId.setGeometry(QRect(500, 100, 300, 100))
-                self.newBoxId.show()
+                    box_id = player.videobox[frameCounter].box_id.index(i)
+                    break
+                    
+            if box_id is not None:     
                 
-            elif action == cancel:
-                pass
-            elif action == clear:
-                self.annotClass = 'Clear'
-                self.annotEnabled = True
-
-            '''
-            posX = event.pos().x()
-            posY = event.pos().y()
-            '''
-            self.repaint()
-            self.buttonLabels = []
-            self.addEventLabels = []
-            self.stopEventLabels = []
-            self.checkStopEventMenu = []
-        self.annotEnabled = False
-        self.stopEventEnabled = False
-
-        gantChart.axes.clear()
-        gantChart.drawChart(player.videobox, framerate)
-        gantChart.draw()
+                if len(player.videobox[frameCounter].annotation) > 0:
+                    for annot in player.videobox[frameCounter].annotation[box_id]:
+                        if annot in highLabels and annot not in self.checkStopEventMenu:
+                            self.checkStopEventMenu.append(annot)
+                            self.stopEventLabels.append(stopEvent.addAction(annot))
+                            self.stopEvent.setEnabled(True)
+               
+                action = self.menu.exec_(self.mapToGlobal(event.pos()))
+    
+                #Check which submenu clicked
+                if action is not None:
+                    if action.parent() == self.addEvent:
+                        self.addEventEnabled = True
+                    elif action.parent() == self.stopEvent:
+                        self.stopEventEnabled = True
+    
+                if self.addEventEnabled:
+                    for index, key in enumerate(self.addEventLabels):
+                        if action == key:
+                            self.annotClass = highLabels[index]
+                            self.annotEnabled = True
+                            self.addEventEnabled = False
+    
+                elif self.stopEventEnabled:
+                    for index, key in enumerate(self.stopEventLabels):
+                        if action == key:
+                            player.videobox[frameCounter].removeEvent(box_id,self.stopEventLabels[index].text() )
+                            self.stopEventEnabled = False
+    
+                for i,key in enumerate(self.buttonLabels):
+                    if action == key:
+                        self.annotClass = classLabels[i]
+                        self.annotEnabled = True
+                if action == self.deleteBox:
+                    self.deleteEnabled = True
+                elif action ==  self.deleteAll:
+                    self.deleteAllBoxes = True
+                elif action == self.changeId:
+                    #Call the textbox
+                    self.newBoxId = rosbagGui.textBox(player.videobox, posX, posY, frameCounter, gantChart, framerate)
+                    self.newBoxId.setGeometry(QRect(500, 100, 300, 100))
+                    self.newBoxId.show()
+                    
+                elif action == self.cancel:
+                    pass
+                elif action == self.clear:
+                    self.annotClass = 'Clear'
+                    self.annotEnabled = True
+    
+                self.repaint()
+                self.buttonLabels = []
+                self.addEventLabels = []
+                self.stopEventLabels = []
+                self.checkStopEventMenu = []
+                self.annotEnabled = False
+                self.stopEventEnabled = False
+    
+                gantChart.axes.clear()
+                gantChart.drawChart(player.videobox, framerate)
+                gantChart.draw()
 
     def sizeHint(self):
         return self.surface.surfaceFormat().sizeHint()
 
     #Shows the video and bound boxes on it
     def paintEvent(self, event):
-        global start_point
-        global end_point
         global frameCounter
         global timeId
 
@@ -364,7 +371,7 @@ class VideoWidget(QWidget):
         
         if self.deleteEnabled:
             i = 0
-            while i < len(player.videobox[frameCounter].box_Id):
+            while i < len(player.videobox[frameCounter].box_id):
                 x,y,w,h = player.videobox[frameCounter].box_Param[i]
                 if posX > x and posX < (x+w) and posY > y and posY < (y+h):
                     if not rectPainter.isActive():
@@ -377,11 +384,11 @@ class VideoWidget(QWidget):
                     if not boxIdPainter.isActive():
                         boxIdPainter.begin(self)
                     boxIdPainter.setPen(QColor(255,0,0))
-                    boxIdPainter.drawText(QRectF(x+2,y,w,h),Qt.AlignLeft,str(player.videobox[frameCounter].box_Id[i]))
+                    boxIdPainter.drawText(QRectF(x+2,y,w,h),Qt.AlignLeft,str(player.videobox[frameCounter].box_id[i]))
                     boxIdPainter.end()
                     timeId = player.videobox[frameCounter].timestamp[0]
-                    player.videobox[frameCounter].removeSpecBox(player.videobox[frameCounter].box_Id[i])
-                    for j in range(len(player.videobox[frameCounter].box_Id)):
+                    player.videobox[frameCounter].removeSpecBox(player.videobox[frameCounter].box_id[i])
+                    for j in range(len(player.videobox[frameCounter].box_id)):
                         x,y,w,h = player.videobox[frameCounter].box_Param[j]
                         if not rectPainter.isActive():
                             rectPainter.begin(self)
@@ -393,14 +400,14 @@ class VideoWidget(QWidget):
                         if not boxIdPainter.isActive():
                             boxIdPainter.begin(self)
                         boxIdPainter.setPen(QColor(255,0,0))
-                        boxIdPainter.drawText(QRectF(x+2,y,w,h),Qt.AlignLeft,str(player.videobox[frameCounter].box_Id[j]))
+                        boxIdPainter.drawText(QRectF(x+2,y,w,h),Qt.AlignLeft,str(player.videobox[frameCounter].box_id[j]))
                         boxIdPainter.end()
                 i += 1
             self.deleteEnabled = False
         #Deletes all boxes in current framerate
         elif self.deleteAllBoxes:
             timeId = player.videobox[frameCounter].timestamp[0]
-            for i in range(len(player.videobox[frameCounter].box_Id)):
+            for i in range(len(player.videobox[frameCounter].box_id)):
                 x,y,w,h = player.videobox[frameCounter].box_Param[i]
                 if not rectPainter.isActive():
                     rectPainter.begin(self)
@@ -412,7 +419,7 @@ class VideoWidget(QWidget):
                 if not boxIdPainter.isActive():
                     boxIdPainter.begin(self)
                 boxIdPainter.setPen(QColor(255,0,0))
-                boxIdPainter.drawText(QRectF(x+2,y,w,h),Qt.AlignLeft,str(player.videobox[frameCounter].box_Id[i]))
+                boxIdPainter.drawText(QRectF(x+2,y,w,h),Qt.AlignLeft,str(player.videobox[frameCounter].box_id[i]))
                 boxIdPainter.end()
             player.videobox[frameCounter].removeAllBox()
             self.deleteAllBoxes = False
@@ -420,88 +427,37 @@ class VideoWidget(QWidget):
         elif self.annotEnabled:
             self.frameNumber = frameCounter
             box = None
-            for i in range(len(player.videobox[frameCounter].box_Id)):
+            for i in range(len(player.videobox[frameCounter].box_id)):
                 x,y,w,h = player.videobox[frameCounter].box_Param[i]
-                if posX > x and posX < (x+w) and posY > y and posY < (y+h):
-                    if not rectPainter.isActive():
-                        rectPainter.begin(self)
-                    rectPainter.setRenderHint(QPainter.Antialiasing)    
-                    if self.annotClass in highLabels:
-                        rectPainter.setPen(QColor(self.getColorBox(player.videobox[frameCounter].annotation[i])))
-                    else:
-                        rectPainter.setPen(QColor(self.getColorBox(self.annotClass)))
-                    rectPainter.drawRect(x,y,w,h)
-                    rectPainter.end()
-
-                    #Paint box id in current frame
-                    if not boxIdPainter.isActive():
-                        boxIdPainter.begin(self)
-                    boxIdPainter.setPen(QColor(255,0,0))
-                    boxIdPainter.drawText(QRectF(x+2,y,w,h),Qt.AlignLeft,str(player.videobox[frameCounter].box_Id[i]))
-                    boxIdPainter.end()
-                    player.videobox[frameCounter].changeClass(i,str(self.annotClass))
-                    box = i
-                else:
-                    if not rectPainter.isActive():
-                        rectPainter.begin(self)
-                    rectPainter.setRenderHint(QPainter.Antialiasing)
+                if not rectPainter.isActive():
+                    rectPainter.begin(self)
+                rectPainter.setRenderHint(QPainter.Antialiasing)    
+                if self.annotClass in highLabels:
                     rectPainter.setPen(QColor(self.getColorBox(player.videobox[frameCounter].annotation[i])))
-                    rectPainter.drawRect(x,y,w,h)
-                    rectPainter.end()
+                else:
+                    rectPainter.setPen(QColor(self.getColorBox(self.annotClass)))
+                rectPainter.drawRect(x,y,w,h)
+                rectPainter.end()
 
-                    #Paint box id in current frame
-                    if not boxIdPainter.isActive():
-                        boxIdPainter.begin(self)
-                    boxIdPainter.setPen(QColor(255,0,0))
-                    boxIdPainter.drawText(QRectF(x+2,y,w,h),Qt.AlignLeft,str(player.videobox[frameCounter].box_Id[i]))
-                    boxIdPainter.end()
+                #Paint box id in current frame
+                if not boxIdPainter.isActive():
+                    boxIdPainter.begin(self)
+                boxIdPainter.setPen(QColor(255,0,0))
+                boxIdPainter.drawText(QRectF(x+2,y,w,h),Qt.AlignLeft,str(player.videobox[frameCounter].box_id[i]))
+                boxIdPainter.end()
+                player.videobox[frameCounter].changeClass(i,str(self.annotClass))
+                box = i
 
             #Annotate the box at remaining frames
             while self.frameNumber < len(player.time_buff):
-                if box >= len(player.videobox[self.frameNumber].box_Id) or box is None:
+                if box >= len(player.videobox[self.frameNumber].box_id) or box is None:
                     self.frameNumber += 1
                     continue
                 player.videobox[self.frameNumber].changeClass(box,str(self.annotClass))
                 self.frameNumber += 1
-
-        elif start_point is True and end_point is True:
-                x = event.rect().x()
-                y = event.rect().y()
-                w = event.rect().width()
-                h = event.rect().height()
-        
-                #Keep the timestamp to add the new box
-                if len(player.videobox[frameCounter].timestamp) > 0:
-                    timeId = player.videobox[frameCounter].timestamp[0]
-                else:
-                    timeId = player.time_buff[frameCounter]
-
-                if self.enableWriteBox:
-                    boxNumber = len(player.videobox[frameCounter].box_Id)
-                    #If id already in the list then give the next id
-                    if boxNumber in player.videobox[frameCounter].box_Id:
-                        boxNumber += 1
-                    player.videobox[frameCounter].addBox(timeId,[boxNumber,x,y,w,h],['Clear'])
-                    self.enableWriteBox = False
-
-                for i in range(len(player.videobox[frameCounter].box_Id)):
-                    x,y,w,h = player.videobox[frameCounter].box_Param[i]
-                    if not rectPainter.isActive():
-                            rectPainter.begin(self)
-                    rectPainter.setRenderHint(QPainter.Antialiasing)
-                    rectPainter.setPen(QColor(self.getColorBox(player.videobox[frameCounter].annotation[i])))
-                    rectPainter.drawRect(x,y,w,h)
-                    rectPainter.end()
-
-                    if not boxIdPainter.isActive():
-                        boxIdPainter.begin(self)
-                    boxIdPainter.setPen(QColor(255,0,0))
-                    boxIdPainter.drawText(QRectF(x+2,y,w,h),Qt.AlignLeft,str(player.videobox[frameCounter].box_Id[i]))
-                    boxIdPainter.end()
-
         #Play the bound boxes from csv
         elif len(player.videobox) > 0 and frameCounter < len(player.time_buff):
-            for i in range(len(player.videobox[frameCounter].box_Id)):
+            for i in range(len(player.videobox[frameCounter].box_id)):
                 x,y,w,h = player.videobox[frameCounter].box_Param[i]
                 if not rectPainter.isActive():
                     rectPainter.begin(self)    
@@ -513,7 +469,7 @@ class VideoWidget(QWidget):
                 if not boxIdPainter.isActive():
                     boxIdPainter.begin(self)
                 boxIdPainter.setPen(QColor(255,0,0))
-                boxIdPainter.drawText(QRectF(x+2,y,w,h),Qt.AlignLeft,str(player.videobox[frameCounter].box_Id[i]))
+                boxIdPainter.drawText(QRectF(x+2,y,w,h),Qt.AlignLeft,str(player.videobox[frameCounter].box_id[i]))
                 boxIdPainter.end()
 
         if rectPainter.isActive():
@@ -521,60 +477,60 @@ class VideoWidget(QWidget):
         
     #Mouse callback handling Boxes
     def mousePressEvent(self,event):
-        global start_point
-        global end_point
-        
-        self.start = None
+        self.drag_start = None
         self.index = None
         self.moved = False
-        #~ if player.controlEnabled and QMouseEvent.button(event) == Qt.LeftButton:
-             #~ self.eraseRectPos = QMouseEvent.pos(event)
-             #~ self.repaint()
         
-        for i in player.videobox[frameCounter].box_Id:
+        #Check the mouse event is inside a box to initiate drag n drop
+        for i in player.videobox[frameCounter].box_id:
             x,y,w,h = player.videobox[frameCounter].box_Param[i]
             if (event.pos().x() >= x) and (event.pos().x() <= x + w) and (event.pos().y() >= y) and (event.pos().y() <= y + h):
                 self.index = i
-                self.start = (event.pos().x(), event.pos().y())
+                self.drag_start = (event.pos().x(), event.pos().y())
                 break
                 
         if QMouseEvent.button(event) == Qt.LeftButton:
-            if start_point is True and end_point is True:
-                pass
-            elif start_point is False:
+            if self.start_point is False:
                 QPoint.pos1 = QMouseEvent.pos(event)
-                start_point = True
-            elif end_point is False:
+                self.start_point = True
+            elif self.end_point is False:
                 QPoint.pos2 = QMouseEvent.pos(event)
                 rect = QRect(QPoint.pos1, QPoint.pos2)
-                end_point = True
-                self.repaint()
-                self.enableWriteBox = True
-                self.repaint(rect)
+                self.end_point = True
+                if len(player.videobox[frameCounter].timestamp) > 0:
+                    timeId = player.videobox[frameCounter].timestamp[0]
+                else:
+                    timeId = player.time_buff[frameCounter]
 
-                start_point = False
-                end_point = False
+                x = QPoint.pos1.x()
+                y = QPoint.pos1.y()
+                w = QPoint.pos2.x() - QPoint.pos1.x()
+                h = QPoint.pos2.y() - QPoint.pos1.y()
+                boxNumber = len(player.videobox[frameCounter].box_id)
+                #If id already in the list then give the next id
+                if boxNumber in player.videobox[frameCounter].box_id:
+                    boxNumber += 1
+                player.videobox[frameCounter].addBox(timeId, [boxNumber,x,y,w,h], ['Clear'])
+                self.repaint()
+
+                self.start_point = False
+                self.end_point = False
     
     def mouseMoveEvent(self, event):
-        global start_point
         if event.buttons() == QtCore.Qt.LeftButton:
             self.moved = True
-            start_point = False
+            self.start_point = False
         
     def mouseReleaseEvent(self, event):
-        global start_point
-        global end_point
         if self.moved and self.index is not None:
             x,y,w,h =  player.videobox[frameCounter].box_Param[self.index]
-            st_x, st_y = self.start
+            st_x, st_y = self.drag_start
             player.videobox[frameCounter].box_Param[self.index] =  event.pos().x() - (st_x - x), event.pos().y() - (st_y - y), w, h
-            start_point = False
-            end_point = False
             self.moved = False
+            self.drag_start = None
             self.index = None
             self.repaint()
         
-            
     def resizeEvent(self, event):
         QWidget.resizeEvent(self, event)
         self.surface.updateVideoRect()
@@ -609,9 +565,15 @@ class VideoWidget(QWidget):
 class VideoPlayer(QWidget):
     
     def __init__(self, parent=None):
-        global gantChart, Topics
+        global gantChart
+        global Topics
+        global classLabels
+        global highLabels
         super(VideoPlayer, self).__init__(parent)
         self.mediaPlayer = QMediaPlayer(None, QMediaPlayer.VideoSurface)
+        
+        #Parse json file
+        classLabels, highLabels = self.parseJson()
         
         Topics              = None
         self.time_          = 0
@@ -677,8 +639,6 @@ class VideoPlayer(QWidget):
         self.mediaPlayer.positionChanged.connect(self.positionChanged)
         self.mediaPlayer.durationChanged.connect(self.durationChanged)
 
-        
-    
     def createSlider(self):
         self.positionSlider = QSlider(Qt.Horizontal)
         self.positionSlider.setMinimum(0)
@@ -973,26 +933,19 @@ class VideoPlayer(QWidget):
 
     def openFile(self):
         global framerate
+        global bagFile
         global depthFileName
         global rgbFileName
         global Topics
         global classLabels
         global highLabels
         start_time = None
-        
-        #Parse json file
-        try:
-            classLabels, highLabels = self.parseJson()
-        except:
-            self.errorMessages(3)
-                  
-        fileName,_ = QFileDialog.getOpenFileName(self, "Open Bag", QDir.currentPath(),"(*.bag)")
-
+               
+        fileName, _ = QFileDialog.getOpenFileName(self, "Open Bag", QDir.currentPath(),"(*.bag)")
+        bagFile = fileName
         # create a messsage box for get or load data info
         print not fileName
-        if not fileName:
-            pass
-        else:
+        if fileName:
             try:
                 bag = rosbag.Bag(fileName)
                 Topics, self.duration = get_bag_metadata(bag)
@@ -1128,19 +1081,6 @@ class VideoPlayer(QWidget):
             gantChart.drawChart(self.videobox, framerate)
             gantChart.draw()
 
-    def parseJson(self):
-        json_basicLabel = []
-        json_highLabel = []
-
-        with open("labels.json") as json_file:
-                json_data = json.load(json_file)
-                json_label = []
-                for i in json_data['basiclabels'] :
-                    json_basicLabel.append(i)
-                for j in json_data['highlevellabels']:
-                    json_highLabel.append(j)
-        return json_basicLabel,json_highLabel
-
     def errorMessages(self,index):
         msgBox = QMessageBox()
         msgBox.setIcon(msgBox.Warning)
@@ -1242,6 +1182,7 @@ class VideoPlayer(QWidget):
 
     #Writes the boxes to csv
     def writeCSV(self,videobox):
+        global bagFile
         list_insert_time = []
         list_insert_box = []
         list_insert_class = []
@@ -1259,7 +1200,7 @@ class VideoPlayer(QWidget):
         for i in self.videobox:
             for j in i.timestamp:
                 list_insert_time.append(j)
-            for k in i.box_Id:
+            for k in i.box_id:
                 list_insert_box.append(k)
             for l in i.box_Param:
                 list_insert_param_1.append(l[0])
@@ -1277,33 +1218,47 @@ class VideoPlayer(QWidget):
                 list_metr_param_4.append(metr[3])
                 list_metr_param_5.append(metr[4])
                 list_metr_param_6.append(metr[5])
-
-        with open('boxes_updated.csv', 'w') as file:
+        
+        csvFileName = bagFile.replace(".bag","_out.csv")
+        with open(csvFileName, 'w') as file:
             csv_writer = csv.writer(file, delimiter='\t')
             headlines = ['Timestamp','Rect_id', 'Rect_x','Rect_y','Rect_W','Rect_H','Class','Meter_X','Meter_Y','Meter_Z','Top','Height' ,'Distance']
             csv_writer.writerow(headlines)
             rows = zip(list_insert_time,list_insert_box,list_insert_param_1,list_insert_param_2,list_insert_param_3,list_insert_param_4,list_insert_class,list_metr_param_1,list_metr_param_2,list_metr_param_3,list_metr_param_4,list_metr_param_5,list_metr_param_6)
             csv_writer.writerows(rows)
-        print "Csv written at: boxes_updated.csv"
+        print "Csv written at: ", csvFileName
    
     def closeEvent(self, event):
         self.writeCSV(self.videobox)
-
+    
+    def parseJson(self):
+        json_basicLabel = []
+        json_highLabel = []
+        
+        with open("labels.json") as json_file:
+                json_data = json.load(json_file)
+                json_label = []
+                for i in json_data['basiclabels'] :
+                    json_basicLabel.append(i)
+                for j in json_data['highlevellabels']:
+                    json_highLabel.append(j)
+        return json_basicLabel,json_highLabel
+    
 
 #Holds the bound box parameters
 class boundBox(object):
-    def __init__(self,parent=None):
+    def __init__(self, parent=None):
         global xBoxCoord
 
         super(boundBox, self).__init__()
         self.timestamp = []
-        self.box_Id = []
+        self.box_id = []
         self.box_Param = []
         self.annotation = []
 
-    def addBox(self,time,key,classify):
+    def addBox(self, time, key, classify):
         self.timestamp.append(time)
-        self.box_Id.append(key[0])
+        self.box_id.append(key[0])
         self.box_Param.append(key[1:])
         self.annotation.append(classify)
 
@@ -1311,28 +1266,24 @@ class boundBox(object):
 
     def removeAllBox(self):
         self.timestamp[:] = []
-        self.box_Id[:] = []
+        self.box_id[:] = []
         self.box_Param[:] = []
         self.annotation[:] = []
 
-    def removeSpecBox(self,boxid):
+    def removeSpecBox(self, boxid):
         self.timestamp.pop(boxid)
-        self.box_Id.pop(boxid)
+        self.box_id.pop(boxid)
         self.box_Param.pop(boxid)
         self.annotation.pop(boxid)
 
     #Handles the annotation for basic and high level classes
-    def changeClass(self,boxid,classify):
-        global classLabels, highLabels
+    def changeClass(self, boxid, classify):
+        global classLabels
+        global highLabels
         if classify in classLabels:
-            for annot in self.annotation[boxid]:
-                if annot in classLabels or annot == 'Clear':
-                    self.annotation[boxid].remove(annot)
-                    self.annotation[boxid].append(classify)
+            self.annotation[boxid][0] = classify
         elif classify in highLabels:
-            if classify in self.annotation[boxid]:
-                pass
-            else:
+            if classify not in self.annotation[boxid]:
                 self.annotation[boxid].append(classify)
 
     #Remove high level events
@@ -1345,7 +1296,7 @@ class boundBox(object):
         frameNumber = frameCounter + 1
         #Annotate the box at remaining frames
         while frameNumber < len(player.time_buff):
-            if boxid >= len(player.videobox[frameNumber].box_Id):
+            if boxid >= len(player.videobox[frameNumber].box_id):
                 break
             if action in player.videobox[frameNumber].annotation[boxid]:
                 player.videobox[frameNumber].annotation[boxid].remove(action)
@@ -1400,8 +1351,10 @@ class boundBox(object):
 
 
 class MainWindow(QMainWindow):
-    global bagFile
     global csvFile
+    global classLabels
+    global highLabels
+    
     def __init__(self, player):
         super(MainWindow, self).__init__()
         self.setCentralWidget(player)
@@ -1410,6 +1363,7 @@ class MainWindow(QMainWindow):
         self.fileMenu.addAction(self.openBagAct)
         self.fileMenu.addAction(self.openCsvAct)
         self.fileMenu.addAction(self.quitAct)
+        
         
     def createActions(self):
         self.openBagAct = QAction("&Open rosbag", self, shortcut="Ctrl+B",
@@ -1428,7 +1382,7 @@ class MainWindow(QMainWindow):
     def close(self):
         player.closeEvent(self)
         sys.exit(app)
-        
+    
 if __name__ == '__main__':
     os.system('cls' if os.name == 'nt' else 'clear')
     app = QApplication(sys.argv)
@@ -1436,7 +1390,6 @@ if __name__ == '__main__':
     player = VideoPlayer()
     main = MainWindow(player)
     main.show()
-    #main.setFixedSize(1300,1000)
 
     app.exec_()
     try:

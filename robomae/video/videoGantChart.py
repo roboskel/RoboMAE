@@ -61,16 +61,16 @@ class gantShow(videoGantChart):
         self.axes.hlines(0,0,0)
 
         for frame_index in videobox:
-            for boxIdx in frame_index.box_Id:
+            for boxIdx in frame_index.box_id:
 
                 for allactions in frame_index.annotation[boxIdx]:
                     if isinstance(allactions, list):
                         for action in allactions:
                             self.boxAtYaxes.append([boxIdx,action])
-                            self.timeWithId.append([boxIdx,frame_index.timestamp[frame_index.box_Id.index(boxIdx)],action])
+                            self.timeWithId.append([boxIdx,frame_index.timestamp[frame_index.box_id.index(boxIdx)],action])
                     else:
                         self.boxAtYaxes.append([boxIdx,allactions])
-                        self.timeWithId.append([boxIdx,frame_index.timestamp[frame_index.box_Id.index(boxIdx)],frame_index.annotation[frame_index.box_Id.index(boxIdx)]])
+                        self.timeWithId.append([boxIdx,frame_index.timestamp[frame_index.box_id.index(boxIdx)],frame_index.annotation[frame_index.box_id.index(boxIdx)]])
         #Remove duplicates and sort the Y axes
         self.boxAtYaxes.sort()
         self.boxAtYaxes = list(k for k,_ in itertools.groupby(self.boxAtYaxes))
