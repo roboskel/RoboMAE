@@ -182,8 +182,7 @@ class VideoWidgetSurface(QAbstractVideoSurface):
         size.scale(self.widget.size().boundedTo(size), Qt.KeepAspectRatio)
         self.targetRect = QRect(QPoint(0, 0), size);
         self.targetRect.moveCenter(self.widget.rect().center())
-       
-
+    
     def paint(self, painter):
         if (self.currentFrame.map(QAbstractVideoBuffer.ReadOnly)):
             oldTransform = painter.transform()
@@ -202,8 +201,6 @@ class VideoWidgetSurface(QAbstractVideoSurface):
             self.currentFrame.unmap()
            
             
-
-
 class VideoWidget(QWidget):
 
     def __init__(self, parent=None):
@@ -235,13 +232,14 @@ class VideoWidget(QWidget):
         return self.surface
 
     #Shows the right click menu
-    def contextMenuEvent(self,event):
+    def contextMenuEvent(self, event):
         global posX
         global posY
         global classLabels
         global gantChart
         global highLabels
         global frameCounter
+        global framerate
         
         self.stopEventEnabled = False
         self.addEventEnabled = False
@@ -309,9 +307,10 @@ class VideoWidget(QWidget):
                 self.deleteAllBoxes = True
             elif action == changeId:
                 #Call the textbox
-                self.newBoxId = textBox()
+                self.newBoxId = rosbagGui.textBox(player.videobox, posX, posY, frameCounter, gantChart, framerate)
                 self.newBoxId.setGeometry(QRect(500, 100, 300, 100))
                 self.newBoxId.show()
+                
             elif action == cancel:
                 pass
             elif action == clear:
@@ -520,16 +519,26 @@ class VideoWidget(QWidget):
         if rectPainter.isActive():
             rectPainter.end()
         
-    
     #Mouse callback handling Boxes
     def mousePressEvent(self,event):
         global start_point
         global end_point
-
-        if player.controlEnabled and QMouseEvent.button(event) == Qt.LeftButton:
-             self.eraseRectPos= QMouseEvent.pos(event)
-             self.repaint()
-        elif QMouseEvent.button(event) == Qt.LeftButton:
+        
+        self.start = None
+        self.index = None
+        self.moved = False
+        #~ if player.controlEnabled and QMouseEvent.button(event) == Qt.LeftButton:
+             #~ self.eraseRectPos = QMouseEvent.pos(event)
+             #~ self.repaint()
+        
+        for i in player.videobox[frameCounter].box_Id:
+            x,y,w,h = player.videobox[frameCounter].box_Param[i]
+            if (event.pos().x() >= x) and (event.pos().x() <= x + w) and (event.pos().y() >= y) and (event.pos().y() <= y + h):
+                self.index = i
+                self.start = (event.pos().x(), event.pos().y())
+                break
+                
+        if QMouseEvent.button(event) == Qt.LeftButton:
             if start_point is True and end_point is True:
                 pass
             elif start_point is False:
@@ -537,7 +546,7 @@ class VideoWidget(QWidget):
                 start_point = True
             elif end_point is False:
                 QPoint.pos2 = QMouseEvent.pos(event)
-                rect = QRect(QPoint.pos1,QPoint.pos2)
+                rect = QRect(QPoint.pos1, QPoint.pos2)
                 end_point = True
                 self.repaint()
                 self.enableWriteBox = True
@@ -545,7 +554,27 @@ class VideoWidget(QWidget):
 
                 start_point = False
                 end_point = False
-
+    
+    def mouseMoveEvent(self, event):
+        global start_point
+        if event.buttons() == QtCore.Qt.LeftButton:
+            self.moved = True
+            start_point = False
+        
+    def mouseReleaseEvent(self, event):
+        global start_point
+        global end_point
+        if self.moved and self.index is not None:
+            x,y,w,h =  player.videobox[frameCounter].box_Param[self.index]
+            st_x, st_y = self.start
+            player.videobox[frameCounter].box_Param[self.index] =  event.pos().x() - (st_x - x), event.pos().y() - (st_y - y), w, h
+            start_point = False
+            end_point = False
+            self.moved = False
+            self.index = None
+            self.repaint()
+        
+            
     def resizeEvent(self, event):
         QWidget.resizeEvent(self, event)
         self.surface.updateVideoRect()
@@ -576,74 +605,6 @@ class VideoWidget(QWidget):
                 elif key == 'Clear':
                     return '#0000FF'
 
-
-class textBox(QWidget):
-
-    def __init__(self):
-        global frameCounter
-        global posX
-        global posY
-
-        QWidget.__init__(self)
-        self.setWindowTitle('Set Box id')
-        self.main_widget = QWidget(self)
-        self.boxId = QLineEdit(self)
-        self.Ok = QPushButton("Ok", self)
-
-    def paintEvent(self, event):
-        self.boxId.setPlaceholderText('Box Id:')
-        self.boxId.setMinimumWidth(100)
-        self.boxId.setEnabled(True)
-
-        self.boxId.move(90, 15)
-        self.Ok.move(115, 60)
-
-        self.boxId.textChanged.connect(self.boxChanged)
-        self.Ok.clicked.connect(self.closeTextBox)
-
-        self.Ok.show()
-        self.boxId.show()
-
-    def boxChanged(self,text):
-        self.box_Idx = text
-
-    def closeTextBox(self):
-        try:
-            self.box_Idx = int(self.box_Idx)
-        except:
-            msgBox = QMessageBox()
-            msgBox.setText("Wrong type, integer expected")
-            msgBox.resize(100,40)
-            msgBox.exec_()
-
-        #Check id
-        for i in range(len(player.videobox[frameCounter].box_Id)):
-            if self.box_Idx == player.videobox[frameCounter].box_Id[i]:
-                #Box Id already given
-                msgBox = QMessageBox()
-                msgBox.setText("Box Id already given")
-                msgBox.resize(100,40)
-                msgBox.exec_()
-
-        for i in range(len(player.videobox[frameCounter].box_Id)):
-            x,y,w,h = player.videobox[frameCounter].box_Param[i]
-            if posX > x and posX  < (x+w) and posY > y and posY < (y+h):
-                old_value = player.videobox[frameCounter].box_Id[i]
-                player.videobox[frameCounter].box_Id[i] = self.box_Idx
-                self.writeEnable = True
-                self.frameNumber = frameCounter
-                old_index = i
-                break
-
-        if self.writeEnable:
-            while self.frameNumber < len(player.time_buff):
-                if old_value in player.videobox[self.frameNumber].box_Id:
-                    player.videobox[self.frameNumber].box_Id[old_index] = self.box_Idx
-                self.frameNumber += 1
-            self.writeEnable = False
-
-        self.Ok.clicked.disconnect()
-        self.close()
 
 class VideoPlayer(QWidget):
     
@@ -784,9 +745,7 @@ class VideoPlayer(QWidget):
         self.mediaPlayer.pause()
         self.Pause()
 
-    # VIDEO SWITCH RGB <-> Depth
-    #----------------------
-
+    #VIDEO SWITCH RGB <-> Depth
     def rgbVideo(self, enabled):
         global rgbFileName
         global frameCounter
@@ -838,7 +797,6 @@ class VideoPlayer(QWidget):
             self.mediaPlayer.setPosition(pos) 
         
     # AUDIO PLAYER BUTTON FUNCTIONS
-    
     def createAudio(self):
         #Define Audio annotations and gantt chart
         self.wave = vA.Waveform()
@@ -879,12 +837,10 @@ class VideoPlayer(QWidget):
         
         return buttonLayoutAudio
        
-    # >> Play audio (whole signal or segment)
-    #----------------------
+    #Play audio (whole signal or segment)
     def audioPlay(self):
 
         #GET CLICKS FROM WAVEFORM
-        #----------------------
         #Initialize connection-position ONCE
         if not audioGlobals.playerStarted:
             #10ms for changePosition -> Not Delaying
@@ -912,24 +868,21 @@ class VideoPlayer(QWidget):
         playFlag = True
         self.player.play()
 
-    # >> Pause audio playing
-    #----------------------
+    #Pause audio playing
     def audioPause(self):
         #Not begging from self.start
         audioGlobals.playerStarted = True
         self.player.setPosition(self.time_)
         self.player.pause()
 
-    # >> Stop audio playing
-    #----------------------
+    #Stop audio playing
     def audioStop(self):
         self.player.stop()
         #Begin again segment
         self.start = audioGlobals.startTimeToPlay
         self.player.setPosition(self.start)
 
-    # >> Check ms in audio to stop play
-    #----------------------
+    #Check ms in audio to stop play
     def checkPositionToStop(self):
         self.time_ = self.player.position()
         #self.positionSlider.setValue(self.time_/1000)
@@ -938,8 +891,7 @@ class VideoPlayer(QWidget):
             self.player.setPosition(self.start)
             #self.positionSlider.setValue(self.start)
 
-
-    # >> LASER BUTTON FUNCTIONS
+    #LASER BUTTON FUNCTIONS
     def createLaserButtons(self, scanLayout):
         
         playButtonLaser      = QPushButton()
@@ -1265,8 +1217,6 @@ class VideoPlayer(QWidget):
         self.timelabel.setText(self.label_tmp.format('Time: ' + str(time) + '/ ' + str("{0:.2f}".format(self.duration)) + ' sec'))
         laserGlobals.cnt = position/100
 
-        #self.timelabel.(position)
-
     def keyPressEvent(self,event):
         if event.key() == Qt.Key_Control:
             self.controlEnabled = True
@@ -1279,7 +1229,6 @@ class VideoPlayer(QWidget):
         global durationSlider
         durationSlider = duration
         self.positionSlider.setRange(0, duration)
-
 
     def setPosition(self, position):
         global frameCounter
@@ -1335,9 +1284,11 @@ class VideoPlayer(QWidget):
             csv_writer.writerow(headlines)
             rows = zip(list_insert_time,list_insert_box,list_insert_param_1,list_insert_param_2,list_insert_param_3,list_insert_param_4,list_insert_class,list_metr_param_1,list_metr_param_2,list_metr_param_3,list_metr_param_4,list_metr_param_5,list_metr_param_6)
             csv_writer.writerows(rows)
-
-    def closeEvent(self,event):
+        print "Csv written at: boxes_updated.csv"
+   
+    def closeEvent(self, event):
         self.writeCSV(self.videobox)
+
 
 #Holds the bound box parameters
 class boundBox(object):
@@ -1453,27 +1404,30 @@ class MainWindow(QMainWindow):
     global csvFile
     def __init__(self, player):
         super(MainWindow, self).__init__()
-        
         self.setCentralWidget(player)
-        
         self.createActions()
-        
         self.fileMenu = self.menuBar().addMenu("&File")
         self.fileMenu.addAction(self.openBagAct)
         self.fileMenu.addAction(self.openCsvAct)
+        self.fileMenu.addAction(self.quitAct)
         
-    
     def createActions(self):
-        self.openBagAct = QAction("&Open rosbag", self, shortcut=QKeySequence.New,
+        self.openBagAct = QAction("&Open rosbag", self, shortcut="Ctrl+B",
             statusTip="Open rosbag", triggered=self.openBag)
-        self.openCsvAct = QAction("&Open csv", self, shortcut=QKeySequence.New,
+        self.openCsvAct = QAction("&Open video csv", self, shortcut="Ctrl+V",
             statusTip="Open csv", triggered=self.openCSV)
+        self.quitAct = QAction("&Quit", self, shortcut="Ctrl+Q",
+            statusTip="Quit", triggered=self.close)
         
     def openBag(self):
         player.openFile()
         
     def openCSV(self):
         player.openCsv()
+     
+    def close(self):
+        player.closeEvent(self)
+        sys.exit(app)
         
 if __name__ == '__main__':
     os.system('cls' if os.name == 'nt' else 'clear')

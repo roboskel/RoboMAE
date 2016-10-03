@@ -55,11 +55,10 @@ class gantShow(videoGantChart):
         self.tickX = []
         self.boxAtYaxes = []
         self.axes.hlines(0,0,0)
-        
-    
 
         for frame_index in videobox:
             for boxIdx in frame_index.box_Id:
+
                 for allactions in frame_index.annotation[boxIdx]:
                     if isinstance(allactions, list):
                         for action in allactions:
@@ -90,7 +89,7 @@ class gantShow(videoGantChart):
         self.axes.set_xticklabels([])
         self.axes.set_yticks(self.tickY)
         self.axes.set_ylim([-1,len(self.boxAtYaxes)])
-        self.axes.set_yticklabels([str(index[0]).ljust(10) + str(index[1]).ljust(10) for index in self.boxAtYaxes])
+        self.axes.set_yticklabels([str(index[0]) + "::" + str(index[1]).ljust(5) for index in self.boxAtYaxes])
         self.axes.grid(True)
 
     #Calculates the end time for each annotation to plot
