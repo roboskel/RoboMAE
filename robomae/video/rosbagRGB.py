@@ -108,26 +108,26 @@ Input:
 Output: --
 """
 def write_rgb_video(rgbFileName, image_buffer, framerate):
-    print  colored('Writing rgb video at: ', 'yellow'),rgbFileName 
-    #Check opencv version
-    major = cv2.__version__.split(".")[0]
-    if major == '3':
-        fourcc = cv2.VideoWriter_fourcc('X', 'V' ,'I', 'D')
-    else:
-        fourcc = cv2.cv.CV_FOURCC('X', 'V' ,'I', 'D')
-
-    height, width, bytesPerComponent = image_buffer[0].shape
-    video_writer = cv2.VideoWriter(rgbFileName, fourcc, framerate, (width,height), cv2.IMREAD_COLOR)
-
-    if not video_writer.isOpened():
-        self.errorMessages(2)
-    else:
-        #print("Video initialized")
-        for frame in image_buffer:
-            video_writer.write(frame)
-        video_writer.release()
-    print colored('Video writen successfully', 'yellow')
-    
+	result = False
+	print  colored('Writing rgb video at: ', 'yellow'),rgbFileName 
+	#Check opencv version
+	major = cv2.__version__.split(".")[0]
+	if major == '3':
+		fourcc = cv2.VideoWriter_fourcc('X', 'V' ,'I', 'D')
+	else:
+		fourcc = cv2.cv.CV_FOURCC('X', 'V' ,'I', 'D')
+	
+	height, width, bytesPerComponent = image_buffer[0].shape
+	video_writer = cv2.VideoWriter(rgbFileName, fourcc, framerate, (width,height), cv2.IMREAD_COLOR)
+	
+	if video_writer.isOpened():
+		result = True
+		#print("Video initialized")
+		for frame in image_buffer:
+			video_writer.write(frame)
+		video_writer.release()
+		print colored('Video writen successfully', 'yellow')
+	return result
     
 def video_metadata(rgbFileName):
     cap = cv2.VideoCapture(rgbFileName)

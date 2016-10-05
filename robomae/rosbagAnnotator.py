@@ -213,9 +213,6 @@ class VideoWidget(QWidget):
         self.setSizePolicy(QSizePolicy.MinimumExpanding ,
         QSizePolicy.MinimumExpanding)
         self.surface = VideoWidgetSurface(self)
-        self.start_point = False
-        self.end_point = False
-        self.vanishBox = False
         self.vanishBox = False
         self.enableWriteBox = False
         self.annotEnabled = False
@@ -225,6 +222,8 @@ class VideoWidget(QWidget):
         self.buttonLabels = []
         self.addEventLabels = []
         self.stopEventLabels = []
+        self.start_point = False
+        self.end_point = False
         self.drag_start = None
         self.index = None
         self.moved = False
@@ -488,8 +487,7 @@ class VideoWidget(QWidget):
 				if (event.pos().x() >= x) and (event.pos().x() <= x + w) and (event.pos().y() >= y) and (event.pos().y() <= y + h):
 					self.index = i
 					self.drag_start = (event.pos().x(), event.pos().y())
-                
-                
+					break
 			if self.start_point is False:
 				QPoint.pos1 = QMouseEvent.pos(event)
 				self.start_point = True
@@ -511,6 +509,7 @@ class VideoWidget(QWidget):
 					boxNumber += 1
 				player.videobox[frameCounter].addBox(timeId, [boxNumber,x,y,w,h], ['Clear'])
 				self.repaint()
+
 				self.start_point = False
 				self.end_point = False
     
@@ -532,8 +531,6 @@ class VideoWidget(QWidget):
 		self.moved = False
 		self.drag_start = None
 		self.index = None
-		self.start_point = False
-		self.end_point = False
         
     def resizeEvent(self, event):
         QWidget.resizeEvent(self, event)
@@ -996,15 +993,21 @@ class VideoPlayer(QWidget):
 						#Get bag video metadata
 						print colored('Get rgb data from ROS', 'green')
 						(image_buffer, self.time_buff) = rosbagRGB.buffer_rgb_data(bag, self.topic_window.temp_topics[2][1], compressed)
-						rosbagRGB.write_rgb_video(rgbFileName, image_buffer, framerate)
+						if not image_buffer:
+							raise Exception(8)
+
+						result  = rosbagRGB.write_rgb_video(rgbFileName, image_buffer, framerate)
+						if not result:
+							raise Exception(2)
 						
 					(framerate, self.message_count, self.duration) = rosbagRGB.video_metadata(rgbFileName)
 					
 					#Initialize objects which are equal to frames
 					self.videobox = [boundBox(count) for count in range(int(self.message_count))]    
 					
-				except:
-					self.errorMessages(8)
+				except Exception as e:
+					print e
+					self.errorMessages(e[0])
 				
 			
 			
@@ -1096,31 +1099,32 @@ class VideoPlayer(QWidget):
         msgBox = QMessageBox()
         msgBox.setIcon(msgBox.Warning)
         if index == 0:
-            msgBox.setText("Error: Incorrect Bag File")
+            msgBox.setWindowTitle("Open rosbag")
+            msgBox.setText("Could not open rosbag")
         elif index == 1:
-            msgBox.setIcon(msgBox.Warning)
-            msgBox.setText("Error occured: Please check CSV file")
+            msgBox.setWindowTitle("Open CSV")
+            msgBox.setText("Could not process CSV file")
         elif index == 2:
+            msgBox.setWindowTitle("Open rosbag")
             msgBox.setIcon(msgBox.Critical)
-            msgBox.setText("Error: Video could not initialized")
+            msgBox.setText("Could not write video")
         elif index == 3:
             msgBox.setText("Error: Json file path error")
         elif index == 4:
             msgBox.setText("Not integer type")
         elif index == 5:
-            msgBox.setIcon(msgBox.Warning)
             msgBox.setText("Box id already given")
         elif index == 6:
-            msgBox.setIcon(msgBox.Warning)
+            msgBox.setWindowTitle("Open rosbag")
             msgBox.setText("Incorrect Audio Topic")
         elif index == 7:
-            msgBox.setIcon(msgBox.Warning)
+            msgBox.setWindowTitle("Open rosbag")
             msgBox.setText("Incorrect Depth Topic")
         elif index == 8:
-            msgBox.setIcon(msgBox.Warning)
+            msgBox.setWindowTitle("Open rosbag")
             msgBox.setText("Incorrect RGB Topic")
         elif index == 9:
-            msgBox.setIcon(msgBox.Warning)
+            msgBox.setWindowTitle("Open rosbag")
             msgBox.setText("Incorrect Laser Topic")
         elif index == 10:
             msgBox.setWindowTitle("Open CSV")
