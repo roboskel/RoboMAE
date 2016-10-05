@@ -4,6 +4,7 @@
 import os
 import csv
 import cv2
+import ast
 import yaml
 from termcolor import colored
 from sensor_msgs.msg import Image
@@ -82,7 +83,7 @@ def buffer_video_csv(csv_file):
                     for row in csv_reader:
                         (rec_id, x, y, width, height) = map(int, row[index:index + 5])
                         (meter_X, meter_Y, meter_Z, top, meter_h, distance) = map(float, row[(index+6)::])
-                        box_buff.append((timestamp, rec_id, x, y, width, height))
+                        box_buff.append((rec_id, x, y, width, height))
                         if  isinstance(row[index+5], str):
                             string = row[index+5]
                             if string.startswith('[') and string.endswith(']'):
