@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 
 import csv
@@ -481,57 +481,59 @@ class VideoWidget(QWidget):
     #Mouse callback handling Boxes
     def mousePressEvent(self,event):
         
-        #Check the mouse event is inside a box to initiate drag n drop
-        for i in player.videobox[frameCounter].box_id:
-            x,y,w,h = player.videobox[frameCounter].box_Param[i]
-            if (event.pos().x() >= x) and (event.pos().x() <= x + w) and (event.pos().y() >= y) and (event.pos().y() <= y + h):
-                self.index = i
-                self.drag_start = (event.pos().x(), event.pos().y())
-                break
+		if QMouseEvent.button(event) == Qt.LeftButton:
+			#Check the mouse event is inside a box to initiate drag n drop
+			for i in player.videobox[frameCounter].box_id:
+				x,y,w,h = player.videobox[frameCounter].box_Param[i]
+				if (event.pos().x() >= x) and (event.pos().x() <= x + w) and (event.pos().y() >= y) and (event.pos().y() <= y + h):
+					self.index = i
+					self.drag_start = (event.pos().x(), event.pos().y())
                 
-        if QMouseEvent.button(event) == Qt.LeftButton:
-            if self.start_point is False:
-                QPoint.pos1 = QMouseEvent.pos(event)
-                self.start_point = True
-            elif self.end_point is False:
-                QPoint.pos2 = QMouseEvent.pos(event)
-                rect = QRect(QPoint.pos1, QPoint.pos2)
-                self.end_point = True
-                if len(player.videobox[frameCounter].timestamp) > 0:
-                    timeId = player.videobox[frameCounter].timestamp[0]
-                else:
-                    timeId = player.time_buff[frameCounter]
-
-                x = QPoint.pos1.x()
-                y = QPoint.pos1.y()
-                w = QPoint.pos2.x() - QPoint.pos1.x()
-                h = QPoint.pos2.y() - QPoint.pos1.y()
-                boxNumber = len(player.videobox[frameCounter].box_id)
-                #If id already in the list then give the next id
-                if boxNumber in player.videobox[frameCounter].box_id:
-                    boxNumber += 1
-                player.videobox[frameCounter].addBox(timeId, [boxNumber,x,y,w,h], ['Clear'])
-                self.repaint()
-
-                self.start_point = False
-                self.end_point = False
+                
+			if self.start_point is False:
+				QPoint.pos1 = QMouseEvent.pos(event)
+				self.start_point = True
+			elif self.end_point is False:
+				QPoint.pos2 = QMouseEvent.pos(event)
+				rect = QRect(QPoint.pos1, QPoint.pos2)
+				self.end_point = True
+				if len(player.videobox[frameCounter].timestamp) > 0:
+					timeId = player.videobox[frameCounter].timestamp[0]
+				else:
+					timeId = player.time_buff[frameCounter]
+				x = QPoint.pos1.x()
+				y = QPoint.pos1.y()
+				w = QPoint.pos2.x() - QPoint.pos1.x()
+				h = QPoint.pos2.y() - QPoint.pos1.y()
+				boxNumber = len(player.videobox[frameCounter].box_id)
+				#If id already in the list then give the next id
+				if boxNumber in player.videobox[frameCounter].box_id:
+					boxNumber += 1
+				player.videobox[frameCounter].addBox(timeId, [boxNumber,x,y,w,h], ['Clear'])
+				self.repaint()
+				self.start_point = False
+				self.end_point = False
     
     def mouseMoveEvent(self, event):
-        if event.buttons() == QtCore.Qt.LeftButton:
-            rect = QRect(QPoint.pos1, QMouseEvent.pos(event))
-            self.repaint(rect)
-            self.moved = True
-            self.start_point = False
+		if event.buttons() == QtCore.Qt.LeftButton:
+			rect = QRect(QPoint.pos1, QMouseEvent.pos(event))
+			self.repaint(rect)
+			self.moved = True
+		self.start_point = False
+		self.end_point = False
         
     def mouseReleaseEvent(self, event):
-        if self.moved and self.index is not None:
-            x,y,w,h =  player.videobox[frameCounter].box_Param[self.index]
-            st_x, st_y = self.drag_start
-            player.videobox[frameCounter].box_Param[self.index] =  event.pos().x() - (st_x - x), event.pos().y() - (st_y - y), w, h
-            self.moved = False
-            self.drag_start = None
-            self.index = None
-            self.repaint()
+		if QMouseEvent.button(event) == Qt.LeftButton:
+			if self.moved and self.index is not None:
+				x,y,w,h =  player.videobox[frameCounter].box_Param[self.index]
+				st_x, st_y = self.drag_start
+				player.videobox[frameCounter].box_Param[self.index] =  event.pos().x() - (st_x - x), event.pos().y() - (st_y - y), w, h
+				self.repaint()
+		self.moved = False
+		self.drag_start = None
+		self.index = None
+		self.start_point = False
+		self.end_point = False
         
     def resizeEvent(self, event):
         QWidget.resizeEvent(self, event)
