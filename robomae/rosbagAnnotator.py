@@ -946,74 +946,75 @@ class VideoPlayer(QWidget):
         start_time = None
                
         fileName, _ = QFileDialog.getOpenFileName(self, "Open Bag", QDir.currentPath(),"(*.bag)")
-        bagFile = fileName
-        # create a messsage box for get or load data info
-        print not fileName
-        if fileName:
-            try:
-                bag = rosbag.Bag(fileName)
-                Topics, self.duration = get_bag_metadata(bag)
-                #Show window to select topics
-                self.topic_window.show_topics(Topics)
-            except:
-                self.errorMessages(0)
-
-            #Audio Handling
-            if self.topic_window.temp_topics[0][1] != 'Choose Topic':
-                try:
-                    audioGlobals.annotations = []
-                    rosbagAudio.runMain(bag, str(fileName))
-                except:
-                    self.errorMessages(6)
-
-            #Depth Handling
-            if self.topic_window.temp_topics[1][1] != 'Choose Topic':
-                depthFileName = fileName.replace(".bag","_DEPTH.avi")
-                
-                try:
-                    (self.message_count, compressed, framerate) = rosbagVideo.buffer_video_metadata(bag, self.topic_window.temp_topics[1][1])
-                    rosbagDepth.write_depth_video(bag, depthFileName, self.topic_window.temp_topics[1][1])
-                except:
-                    self.errorMessages(7)
-
-            #RGB Handling
-            if self.topic_window.temp_topics[2][1] != 'Choose Topic':
-                try:
-                    rgbFileName = fileName.replace(".bag","_RGB.avi")
-                    (self.message_count, compressed, framerate) = rosbagVideo.buffer_video_metadata(bag, self.topic_window.temp_topics[2][1])
-                    
-                        
-                    if os.path.isfile(rgbFileName):
-                        print colored('Loaded RGB video', 'yellow')
+     
         
-                        # just fill time buffer in case that video exists
-                        for topic, msg, t in bag.read_messages(topics=[self.topic_window.temp_topics[2][1]]):
-                            if start_time is None:
-                                start_time = t
-                            self.time_buff.append(t.to_sec() - start_time.to_sec())
-                    else:
-                        #Get bag video metadata
-                        print colored('Get rgb data from ROS', 'green')
-                        (image_buffer, self.time_buff) = rosbagRGB.buffer_rgb_data(bag, self.topic_window.temp_topics[2][1], compressed)
-                        rosbagRGB.write_rgb_video(rgbFileName, image_buffer, framerate)
-                        
-                    (framerate, self.message_count, self.duration) = rosbagRGB.video_metadata(rgbFileName)
-                    
-                    #Initialize objects which are equal to frames
-                    self.videobox = [boundBox(count) for count in range(int(self.message_count))]    
-                    
-                except:
-                    self.errorMessages(8)
-                
-            
-            
-            #Laser Topic selection
-            if self.topic_window.temp_topics[3][1] != 'Choose Topic':
-                try:
-                    rosbagLaser.runMain(bag, str(fileName),self.topic_window.temp_topics[3][1])
-                    pass
-                except:
-                    self.errorMessages(9)
+        # create a messsage box for get or load data info
+        if fileName:
+			bagFile = fileName
+			try:
+				bag = rosbag.Bag(fileName)
+				Topics, self.duration = get_bag_metadata(bag)
+				#Show window to select topics
+				self.topic_window.show_topics(Topics)
+			except:
+				self.errorMessages(0)
+			
+			#Audio Handling
+			if self.topic_window.temp_topics[0][1] != 'Choose Topic':
+				try:
+					audioGlobals.annotations = []
+					rosbagAudio.runMain(bag, str(fileName))
+				except:
+					self.errorMessages(6)
+			
+			#Depth Handling
+			if self.topic_window.temp_topics[1][1] != 'Choose Topic':
+				depthFileName = fileName.replace(".bag","_DEPTH.avi")
+				
+				try:
+					(self.message_count, compressed, framerate) = rosbagVideo.buffer_video_metadata(bag, self.topic_window.temp_topics[1][1])
+					rosbagDepth.write_depth_video(bag, depthFileName, self.topic_window.temp_topics[1][1])
+				except:
+					self.errorMessages(7)
+			
+			#RGB Handling
+			if self.topic_window.temp_topics[2][1] != 'Choose Topic':
+				try:
+					rgbFileName = fileName.replace(".bag","_RGB.avi")
+					(self.message_count, compressed, framerate) = rosbagVideo.buffer_video_metadata(bag, self.topic_window.temp_topics[2][1])
+					
+						
+					if os.path.isfile(rgbFileName):
+						print colored('Loaded RGB video', 'yellow')
+			
+						# just fill time buffer in case that video exists
+						for topic, msg, t in bag.read_messages(topics=[self.topic_window.temp_topics[2][1]]):
+							if start_time is None:
+								start_time = t
+							self.time_buff.append(t.to_sec() - start_time.to_sec())
+					else:
+						#Get bag video metadata
+						print colored('Get rgb data from ROS', 'green')
+						(image_buffer, self.time_buff) = rosbagRGB.buffer_rgb_data(bag, self.topic_window.temp_topics[2][1], compressed)
+						rosbagRGB.write_rgb_video(rgbFileName, image_buffer, framerate)
+						
+					(framerate, self.message_count, self.duration) = rosbagRGB.video_metadata(rgbFileName)
+					
+					#Initialize objects which are equal to frames
+					self.videobox = [boundBox(count) for count in range(int(self.message_count))]    
+					
+				except:
+					self.errorMessages(8)
+				
+			
+			
+			#Laser Topic selection
+			if self.topic_window.temp_topics[3][1] != 'Choose Topic':
+				try:
+					rosbagLaser.runMain(bag, str(fileName),self.topic_window.temp_topics[3][1])
+					pass
+				except:
+					self.errorMessages(9)
 
         self.wave.axes.clear()
         self.chart.axes.clear()
@@ -1050,43 +1051,48 @@ class VideoPlayer(QWidget):
 
     #Open CSV file
     def openCsv(self):
-        global framerate
-        global bagFile
-        self.box_buffer = []
-        self.metric_buffer = []
-        
-        # OPEN VIDEO - DEPTH - AUDIO
-        fileName,_ =  QFileDialog.getOpenFileName(self, "Open Csv ", os.path.dirname(os.path.abspath(bagFile)),"(*.csv)")
-        box_buff, metrics_buff, box_action = rosbagRGB.buffer_video_csv(fileName)
+		global framerate
+		global bagFile
+		self.box_buffer = []
+		self.metric_buffer = []
+		
+		print bagFile
+		if bagFile is not None:
+			# OPEN VIDEO - DEPTH - AUDIO
+			fileName,_ =  QFileDialog.getOpenFileName(self, "Open Csv ", os.path.dirname(os.path.abspath(bagFile)),"(*.csv)")
+			box_buff, metrics_buff, box_action = rosbagRGB.buffer_video_csv(fileName)
+		
+			if not (box_buff or metrics_buff):
+				self.errorMessages(1)
+			else:
+				self.box_buffer = [list(elem) for elem in box_buff]
+				self.metric_buffer = [list(key) for key in metrics_buff]
+				#Frame counter initialize
+				counter = 0
+				if len(box_action) > 0:
+					self.box_actionBuffer = [key for key in box_action]
+					for idx, key in enumerate(self.box_buffer):
+						if key[0] == 0:
+							counter += 1
+							self.videobox[counter].addBox(self.time_buff[counter], key, self.box_actionBuffer[idx])
+						else:
+							self.videobox[counter].addBox(self.time_buff[counter], key, self.box_actionBuffer[idx])
+				else:
+					for idx, key in enumerate(self.box_buffer):
+						if key[0] == 0:
+							counter += 1
+							self.videobox[counter].addBox(self.time_buff[counter], key, ['Clear'])
+						else:
+							self.videobox[counter].addBox(self.time_buff[counter], key, ['Clear'])
+				
+				gantChart.axes.clear()
+				gantChart.drawChart(self.videobox, framerate)
+				gantChart.draw()
+		else:
+			self.errorMessages(10)
+		
 
-        if not (box_buff or metrics_buff):
-            self.errorMessages(1)
-        else:
-            self.box_buffer = [list(elem) for elem in box_buff]
-            self.metric_buffer = [list(key) for key in metrics_buff]
-            #Frame counter initialize
-            counter = 0
-            if len(box_action) > 0:
-                self.box_actionBuffer = [key for key in box_action]
-                for idx, key in enumerate(self.box_buffer):
-                    if key[0] == 0:
-                        counter += 1
-                        self.videobox[counter].addBox(self.time_buff[counter], key, self.box_actionBuffer[idx])
-                    else:
-                        self.videobox[counter].addBox(self.time_buff[counter], key, self.box_actionBuffer[idx])
-            else:
-                for idx, key in enumerate(self.box_buffer):
-                    if key[0] == 0:
-                        counter += 1
-                        self.videobox[counter].addBox(self.time_buff[counter], key, ['Clear'])
-                    else:
-                        self.videobox[counter].addBox(self.time_buff[counter], key, ['Clear'])
-            
-            gantChart.axes.clear()
-            gantChart.drawChart(self.videobox, framerate)
-            gantChart.draw()
-
-    def errorMessages(self,index):
+    def errorMessages(self, index):
         msgBox = QMessageBox()
         msgBox.setIcon(msgBox.Warning)
         if index == 0:
@@ -1116,6 +1122,9 @@ class VideoPlayer(QWidget):
         elif index == 9:
             msgBox.setIcon(msgBox.Warning)
             msgBox.setText("Incorrect Laser Topic")
+        elif index == 10:
+            msgBox.setWindowTitle("Open CSV")
+            msgBox.setText("You must select a rosbag first")
 
         msgBox.resize(100,40)
         msgBox.exec_()
