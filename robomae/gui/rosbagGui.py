@@ -92,12 +92,14 @@ class TopicBox(QDialog):
         self.okButton.setEnabled(False)
         
         self.basic_topics = ['Audio', 'Depth', 'Video' , 'Laser']
+        
+
+    def show_topics(self, Topics):
         self.okButtonPush = False
         self.topic_options = []
         self.dropDownBox = []
         self.temp_topics = []
-
-    def show_topics(self, Topics):
+        
         x = 30
         y = 40
         for index,topic in enumerate(self.basic_topics):
