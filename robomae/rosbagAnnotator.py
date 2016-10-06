@@ -267,6 +267,7 @@ class VideoWidget(QWidget):
 
             stopEvent.setEnabled(False)
             for i in range(len(player.videobox[frameCounter].box_id)):
+                
                 x,y,w,h = player.videobox[frameCounter].box_Param[i]
                 if posX > x and posX < (x+w) and posY > y and posY < (y+h):
                     box_id = player.videobox[frameCounter].box_id.index(i)
@@ -299,9 +300,9 @@ class VideoWidget(QWidget):
                                 player.videobox[frameCounter].removeEvent(box_id,self.stopEventLabels[index].text() )
                                 self.stopEventEnabled = False
 
-                    for i,key in enumerate(self.buttonLabels):
+                    for j,key in enumerate(self.buttonLabels):
                         if action == key:
-                            self.annotClass = classLabels[i]
+                            self.annotClass = classLabels[j]
                             self.annotEnabled = True
                     if action == deleteBox:
                         self.deleteEnabled = True
@@ -312,17 +313,18 @@ class VideoWidget(QWidget):
                         self.newBoxId = rosbagGui.textBox(player.videobox, posX, posY, frameCounter, gantChart, framerate)
                         self.newBoxId.setGeometry(QRect(500, 100, 300, 100))
                         self.newBoxId.show()
-                        
                     elif action == cancel:
                         pass
                     elif action == clear:
                         self.annotClass = 'Clear'
                         self.annotEnabled = True
-
-                    '''
-                    posX = event.pos().x()
-                    posY = event.pos().y()
-                    '''
+                    
+                    if self.annotEnabled:
+                        for counter in range(frameCounter, len(player.videobox)):
+                            if i < len(player.videobox[counter].box_id):
+                                player.videobox[counter].changeClass(box_id, str(self.annotClass))
+                            counter += 1
+                            
                     self.repaint()
                     self.buttonLabels = []
                     self.addEventLabels = []
@@ -418,46 +420,6 @@ class VideoWidget(QWidget):
                 boxIdPainter.end()
             player.videobox[frameCounter].removeAllBox()
             self.deleteAllBoxes = False
-        #Enabled when annotating
-        elif self.annotEnabled:
-            self.frameNumber = frameCounter
-            box = None
-            for i in range(len(player.videobox[frameCounter].box_id)):
-                x,y,w,h = player.videobox[frameCounter].box_Param[i]
-                if not rectPainter.isActive():
-                    rectPainter.begin(self)
-                rectPainter.setRenderHint(QPainter.Antialiasing)    
-                if self.annotClass in highLabels:
-                    rectPainter.setPen(QColor(self.getColorBox(player.videobox[frameCounter].annotation[i])))
-                else:
-                    rectPainter.setPen(QColor(self.getColorBox(self.annotClass)))
-                rectPainter.drawRect(x,y,w,h)
-                rectPainter.end()
-
-                #Paint box id in current frame
-                if not boxIdPainter.isActive():
-                    boxIdPainter.begin(self)
-                boxIdPainter.setPen(QColor(255,0,0))
-                boxIdPainter.drawText(QRectF(x+2,y,w,h),Qt.AlignLeft,str(player.videobox[frameCounter].box_id[i]))
-                boxIdPainter.end()
-                player.videobox[frameCounter].changeClass(i,str(self.annotClass))
-                box = i
-
-            #Annotate the box at remaining frames
-            while self.frameNumber < len(player.time_buff):
-                if box >= len(player.videobox[self.frameNumber].box_id) or box is None:
-                    self.frameNumber += 1
-                    continue
-                player.videobox[self.frameNumber].changeClass(box,str(self.annotClass))
-                self.frameNumber += 1
-        #Play the bound boxes from csv
-        #~ elif self.moved:
-            #~ if not rectPainter.isActive():
-                #~ rectPainter.begin(self)
-            #~ rectPainter.setRenderHint(QPainter.Antialiasing)
-            #~ rectPainter.setPen(Qt.red)
-            #~ rectPainter.drawRect(event.rect())
-            #~ rectPainter.end()
         elif len(player.videobox) > 0 and frameCounter < len(player.time_buff):
             for i in range(len(player.videobox[frameCounter].box_id)):
                 x,y,w,h = player.videobox[frameCounter].box_Param[i]
