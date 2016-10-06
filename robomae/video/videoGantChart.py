@@ -61,9 +61,9 @@ class gantShow(videoGantChart):
         self.axes.hlines(0,0,0)
 
         for frame_index in videobox:
-            for boxIdx in frame_index.box_id:
-
-                for allactions in frame_index.annotation[boxIdx]:
+            for i in range(len(frame_index.box_id)):
+                boxIdx = frame_index.box_id[i]
+                for allactions in frame_index.annotation[i]:
                     if isinstance(allactions, list):
                         for action in allactions:
                             self.boxAtYaxes.append([boxIdx,action])
