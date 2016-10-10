@@ -307,7 +307,6 @@ class VideoWidget(QWidget):
 
                 for i,key in enumerate(self.buttonLabels):
                     if action == key:
-                        print i, len(classLabels)
                         self.annotClass = classLabels[i]
                         self.annotEnabled = True
                 if action == deleteBox:
@@ -368,19 +367,20 @@ class VideoWidget(QWidget):
         
         if len(player.videobox) > 0 and frameCounter < len(player.time_buff):
             for i in range(len(player.videobox[frameCounter].box_id)):
-                x,y,w,h = player.videobox[frameCounter].box_Param[i]
-                if not rectPainter.isActive():
-                    rectPainter.begin(self)    
-                rectPainter.setRenderHint(QPainter.Antialiasing)    
-                rectPainter.setPen(QColor(self.getColorBox(player.videobox[frameCounter].annotation[i])))
-                rectPainter.drawRect(x,y,w,h)
-                rectPainter.end()
+                if player.videobox[frameCounter].box_id != -1:
+                    x,y,w,h = player.videobox[frameCounter].box_Param[i]
+                    if not rectPainter.isActive():
+                        rectPainter.begin(self)    
+                    rectPainter.setRenderHint(QPainter.Antialiasing)    
+                    rectPainter.setPen(QColor(self.getColorBox(player.videobox[frameCounter].annotation[i])))
+                    rectPainter.drawRect(x,y,w,h)
+                    rectPainter.end()
 
-                if not boxIdPainter.isActive():
-                    boxIdPainter.begin(self)
-                boxIdPainter.setPen(QColor(255,0,0))
-                boxIdPainter.drawText(QRectF(x+2,y,w,h),Qt.AlignLeft,str(player.videobox[frameCounter].box_id[i]))
-                boxIdPainter.end()
+                    if not boxIdPainter.isActive():
+                        boxIdPainter.begin(self)
+                    boxIdPainter.setPen(QColor(255,0,0))
+                    boxIdPainter.drawText(QRectF(x+2,y,w,h),Qt.AlignLeft,str(player.videobox[frameCounter].box_id[i]))
+                    boxIdPainter.end()
 
         if rectPainter.isActive():
             rectPainter.end()
@@ -659,7 +659,6 @@ class VideoPlayer(QWidget):
         global frameCounter
         if frameCounter > 0:
             frameCounter -= 2
-            print frameCounter
             pos = round(((frameCounter ) * (self.duration * 1000)) / self.message_count)
             self.mediaPlayer.setPosition(pos) 
         
@@ -966,47 +965,46 @@ class VideoPlayer(QWidget):
 
     #Open CSV file
     def openCsv(self):
-		global framerate
-		global bagFile
-		self.box_buffer = []
-		self.metric_buffer = []
+        global framerate
+        global bagFile
+        self.box_buffer = []
+        self.metric_buffer = []
+        
+        if bagFile is not None:
+            # OPEN VIDEO - DEPTH - AUDIO
+            fileName,_ =  QFileDialog.getOpenFileName(self, "Open Csv ", os.path.dirname(os.path.abspath(bagFile)),"(*.csv)")
+            box_buff, metrics_buff, box_action = rosbagRGB.buffer_video_csv(fileName)
+            
+            if not (box_buff or metrics_buff):
+                self.errorMessages(1)
+            else:
+                self.box_buffer = [list(elem) for elem in box_buff]
+                self.metric_buffer = [list(key) for key in metrics_buff]
+                #Frame counter initialize
+                counter = 0
+                if len(box_action) > 0:
+                    self.box_actionBuffer = [key for key in box_action]
+                    for idx, key in enumerate(self.box_buffer):
+                        if key[0] == 0:
+                            counter += 1
+                            self.videobox[counter].addBox(self.time_buff[counter], key, self.box_actionBuffer[idx])
+                        else:
+                            self.videobox[counter].addBox(self.time_buff[counter], key, self.box_actionBuffer[idx])
+                else:
+                    for idx, key in enumerate(self.box_buffer):
+                        if key[0] == 0:
+                            counter += 1
+                            self.videobox[counter].addBox(self.time_buff[counter], key, ['Clear'])
+                        else:
+                            self.videobox[counter].addBox(self.time_buff[counter], key, ['Clear'])
+                
+                gantChart.axes.clear()
+                gantChart.drawChart(self.videobox, framerate)
+                gantChart.draw()
+            print len(self.videobox)
+        else:
+            self.errorMessages(10)
 		
-		print bagFile
-		if bagFile is not None:
-			# OPEN VIDEO - DEPTH - AUDIO
-			fileName,_ =  QFileDialog.getOpenFileName(self, "Open Csv ", os.path.dirname(os.path.abspath(bagFile)),"(*.csv)")
-			box_buff, metrics_buff, box_action = rosbagRGB.buffer_video_csv(fileName)
-		
-			if not (box_buff or metrics_buff):
-				self.errorMessages(1)
-			else:
-				self.box_buffer = [list(elem) for elem in box_buff]
-				self.metric_buffer = [list(key) for key in metrics_buff]
-				#Frame counter initialize
-				counter = 0
-				if len(box_action) > 0:
-					self.box_actionBuffer = [key for key in box_action]
-					for idx, key in enumerate(self.box_buffer):
-						if key[0] == 0:
-							counter += 1
-							self.videobox[counter].addBox(self.time_buff[counter], key, self.box_actionBuffer[idx])
-						else:
-							self.videobox[counter].addBox(self.time_buff[counter], key, self.box_actionBuffer[idx])
-				else:
-					for idx, key in enumerate(self.box_buffer):
-						if key[0] == 0:
-							counter += 1
-							self.videobox[counter].addBox(self.time_buff[counter], key, ['Clear'])
-						else:
-							self.videobox[counter].addBox(self.time_buff[counter], key, ['Clear'])
-				
-				gantChart.axes.clear()
-				gantChart.drawChart(self.videobox, framerate)
-				gantChart.draw()
-		else:
-			self.errorMessages(10)
-		
-
     def errorMessages(self, index):
         msgBox = QMessageBox()
         msgBox.setIcon(msgBox.Warning)

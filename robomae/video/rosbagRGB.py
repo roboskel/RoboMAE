@@ -29,7 +29,7 @@ def buffer_rgb_data(bag, input_topic, compressed):
     time_buff  = []
     start_time = None
     bridge     = CvBridge()
-    
+    count = 0
     #Buffer the images, timestamps from the rosbag
     for topic, msg, t in bag.read_messages(topics=[input_topic]):
         if start_time is None:
@@ -44,7 +44,9 @@ def buffer_rgb_data(bag, input_topic, compressed):
         else:
             nparr = np.fromstring(msg.data, np.uint8)
             cv_image = cv2.imdecode(nparr, cv2.CV_LOAD_IMAGE_COLOR)
-
+	
+	cv2.imwrite("/home/dimitris/projectsPython/RoboMAE/robomae/bag/asd/"+str(count) + ".png", cv_image)
+	count +=1
         image_buff.append(cv_image)
         time_buff.append(t.to_sec() - start_time.to_sec())
 
@@ -71,32 +73,42 @@ def buffer_video_csv(csv_file):
         with open(csv_file, 'r') as file_obj:
             csv_reader = csv.reader(file_obj, delimiter = '\t')
             row_1 = next(csv_reader)
-            try:
-                index = [x.strip() for x in row_1].index('Rect_id')
-                if 'Class' not in row_1:
-                    for row in csv_reader:
-                        (rec_id,x, y, width, height) = map(int, row[index:index + 5])
-                        (meter_X, meter_Y, meter_Z, top,meter_h, distance) = map(float, row[(index+5)::])
-                        box_buff.append((rec_id, x, y, width, height))
-                        metrics.append((meter_X, meter_Y, meter_Z, top, meter_h, distance))
-                else:
-                    for row in csv_reader:
-                        (rec_id, x, y, width, height) = map(int, row[index:index + 5])
-                        (meter_X, meter_Y, meter_Z, top, meter_h, distance) = map(float, row[(index+6)::])
-                        box_buff.append((rec_id, x, y, width, height))
-                        if  isinstance(row[index+5], str):
-                            string = row[index+5]
-                            if string.startswith('[') and string.endswith(']'):
-                                #Transform a string of list to list
-                                string = ast.literal_eval(string)
-                                box_buff_action.append(string)
-                            else:
-                                box_buff_action.append(string)
-                        else:
-                            box_buff_action.append(row[index+5])
-                        metrics.append((meter_X,meter_Y,meter_Z,top,meter_h,distance))
-            except:
-                print("Error processing video csv")
+            #try:
+	    index = [x.strip() for x in row_1].index('Rect_id')
+	    if 'Class' not in row_1:
+		for row in csv_reader:
+		    if len(row) > 2:
+			(rec_id,x, y, width, height) = map(int, row[index:index + 5])
+			(meter_X, meter_Y, meter_Z, top,meter_h, distance) = map(float, row[(index+5)::])
+			box_buff.append((rec_id, x, y, width, height))
+			metrics.append((meter_X, meter_Y, meter_Z, top, meter_h, distance))
+		    else:
+			box_buff.append((-1, 0, 0, 0, 0))
+			metrics.append((0, 0, 0, 0, 0, 0))
+			
+	    else:
+		for row in csv_reader:
+		    if len(row) > 2:
+			(rec_id, x, y, width, height) = map(int, row[index:index + 5])
+			(meter_X, meter_Y, meter_Z, top, meter_h, distance) = map(float, row[(index+6)::])
+			box_buff.append((rec_id, x, y, width, height))
+			if  isinstance(row[index+5], str):
+			    string = row[index+5]
+			    if string.startswith('[') and string.endswith(']'):
+				#Transform a string of list to list
+				string = ast.literal_eval(string)
+				box_buff_action.append(string)
+			    else:
+				box_buff_action.append(string)
+			else:
+			    box_buff_action.append(row[index+5])
+			metrics.append((meter_X,meter_Y,meter_Z,top,meter_h,distance))
+		    else:
+			box_buff_action.append("")
+			box_buff.append((-1, 0, 0, 0, 0))
+			metrics.append((0, 0, 0, 0, 0, 0))
+            #except:
+               # print("Error processing video csv")
     return box_buff, metrics, box_buff_action
 
 """
@@ -117,8 +129,9 @@ def write_rgb_video(rgbFileName, image_buffer, framerate):
 		fourcc = cv2.VideoWriter_fourcc('X', 'V' ,'I', 'D')
 	else:
 		fourcc = cv2.cv.CV_FOURCC('X', 'V' ,'I', 'D')
-	
+
 	height, width, bytesPerComponent = image_buffer[0].shape
+	
 	video_writer = cv2.VideoWriter(rgbFileName, fourcc, framerate, (width,height), cv2.IMREAD_COLOR)
 	
 	if video_writer.isOpened():
