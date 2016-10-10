@@ -222,8 +222,6 @@ class VideoWidget(QWidget):
         self.buttonLabels = []
         self.addEventLabels = []
         self.stopEventLabels = []
-        self.start_point = False
-        self.end_point = False
         self.drag_start = None
         self.index = None
         self.moved = False
@@ -249,19 +247,19 @@ class VideoWidget(QWidget):
             posY = event.pos().y()
             
             menu = QMenu(self)
-            clear = menu.addAction('Clear')
 
             for i in classLabels:
                 self.buttonLabels.append(menu.addAction(i))
-
-            deleteBox = menu.addAction('Delete Box')
-            deleteAllBoxes = menu.addAction('Delete All Boxes')
+            
+            menu.addSeparator()
             addEvent = menu.addMenu('Add Event')
             stopEvent = menu.addMenu('Stop Event')
+            deleteBox = menu.addAction('Delete Box')
+            deleteAllBoxes = menu.addAction('Delete All Boxes')
             #Initiate add Event menu
             for label in highLabels:
                 self.addEventLabels.append(addEvent.addAction(label))
-            changeId = menu.addAction('Change Id')
+            #changeId = menu.addAction('Change Id')
             
             index = -1
             stopEvent.setEnabled(False)
@@ -313,14 +311,11 @@ class VideoWidget(QWidget):
                     player.videobox[frameCounter].removeSpecBox(player.videobox[frameCounter].box_id[index])
                 elif action ==  deleteAllBoxes:
                     player.videobox[frameCounter].removeAllBox()
-                elif action == changeId:
-                    #Call the textbox
-                    self.newBoxId = rosbagGui.textBox(player.videobox, posX, posY, frameCounter, gantChart, framerate)
-                    self.newBoxId.setGeometry(QRect(500, 100, 300, 100))
-                    self.newBoxId.show()
-                elif action == clear:
-                    self.annotClass = 'Clear'
-                    self.annotEnabled = True
+                #~ elif action == changeId:
+                    #~ #Call the textbox
+                    #~ self.newBoxId = rosbagGui.textBox(player.videobox, posX, posY, frameCounter, gantChart, framerate)
+                    #~ self.newBoxId.setGeometry(QRect(500, 100, 300, 100))
+                    #~ self.newBoxId.show()
                 
                 if self.annotEnabled:
                     for counter in range(frameCounter, len(player.videobox)):
@@ -381,7 +376,15 @@ class VideoWidget(QWidget):
                     boxIdPainter.setPen(QColor(255,0,0))
                     boxIdPainter.drawText(QRectF(x+2,y,w,h),Qt.AlignLeft,str(player.videobox[frameCounter].box_id[i]))
                     boxIdPainter.end()
-
+        
+        if self.moved and not event.rect().size().__eq__(self.surface.surfaceFormat().sizeHint()):
+            if not rectPainter.isActive():
+                rectPainter.begin(self)    
+            rectPainter.setRenderHint(QPainter.Antialiasing)    
+            rectPainter.setPen(QColor(0,0,255))
+            rectPainter.drawRect(event.rect())
+            rectPainter.end()
+            
         if rectPainter.isActive():
             rectPainter.end()
         
@@ -389,6 +392,7 @@ class VideoWidget(QWidget):
     def mousePressEvent(self,event):
         
         if QMouseEvent.button(event) == Qt.LeftButton and self.context_menu is False:
+            QPoint.pos1 = QMouseEvent.pos(event)
 			#Check the mouse event is inside a box to initiate drag n drop
             for i in range(len(player.videobox[frameCounter].box_id)):
                 x,y,w,h = player.videobox[frameCounter].box_Param[i]
@@ -396,53 +400,43 @@ class VideoWidget(QWidget):
                     self.index = i
                     self.drag_start = (event.pos().x(), event.pos().y())
                     break
-            if self.start_point is False:
-                QPoint.pos1 = QMouseEvent.pos(event)
-                self.start_point = True
-            elif self.end_point is False:
-                QPoint.pos2 = QMouseEvent.pos(event)
-                rect = QRect(QPoint.pos1, QPoint.pos2)
-                self.end_point = True
-                if len(player.videobox[frameCounter].timestamp) > 0:
-                    timeId = player.videobox[frameCounter].timestamp[0]
-                else:
-                    timeId = player.time_buff[frameCounter]
-                x = QPoint.pos1.x()
-                y = QPoint.pos1.y()
-                w = QPoint.pos2.x() - QPoint.pos1.x()
-                h = QPoint.pos2.y() - QPoint.pos1.y()
-                boxNumber = -1
-                #If id already in the list then give the next id
-                for i in range(len(player.videobox[frameCounter].box_id)):
-                    if(i != player.videobox[frameCounter].box_id[i]):
-                        boxNumber = i
-
-                if boxNumber == -1:
-                    boxNumber = len(player.videobox[frameCounter].box_id)
-                player.videobox[frameCounter].addBox(timeId, [boxNumber,x,y,w,h], ['Clear'])
-                self.repaint()
-                
-                self.start_point = False
-                self.end_point = False
+          
     
     def mouseMoveEvent(self, event):
-		if event.buttons() == QtCore.Qt.LeftButton:
-			rect = QRect(QPoint.pos1, QMouseEvent.pos(event))
-			self.repaint(rect)
-			self.moved = True
-		self.start_point = False
-		self.end_point = False
+        if event.buttons() == QtCore.Qt.LeftButton:
+            if self.index is not None:
+                x,y,w,h =  player.videobox[frameCounter].box_Param[self.index]
+                st_x, st_y = self.drag_start
+                player.videobox[frameCounter].box_Param[self.index] =  event.pos().x() - (st_x - x), event.pos().y() - (st_y - y), w, h
+                self.drag_start = (event.pos().x(), event.pos().y())
+                self.repaint()
+            else:
+                rect = QRect(QPoint.pos1, QMouseEvent.pos(event))
+                self.repaint(rect)
+            self.moved = True
         
     def mouseReleaseEvent(self, event):
-		if QMouseEvent.button(event) == Qt.LeftButton:
-			if self.moved and self.index is not None:
-				x,y,w,h =  player.videobox[frameCounter].box_Param[self.index]
-				st_x, st_y = self.drag_start
-				player.videobox[frameCounter].box_Param[self.index] =  event.pos().x() - (st_x - x), event.pos().y() - (st_y - y), w, h
-				self.repaint()
-		self.moved = False
-		self.drag_start = None
-		self.index = None
+        if QMouseEvent.button(event) == Qt.LeftButton:
+            if self.moved:
+                if self.index is not None:
+                    x,y,w,h =  player.videobox[frameCounter].box_Param[self.index]
+                    st_x, st_y = self.drag_start
+                    player.videobox[frameCounter].box_Param[self.index] =  event.pos().x() - (st_x - x), event.pos().y() - (st_y - y), w, h
+                    self.repaint()
+                else:
+                    x = QPoint.pos1.x()
+                    y = QPoint.pos1.y()
+                    w = event.pos().x() - QPoint.pos1.x()
+                    h = event.pos().y() - QPoint.pos1.y()
+                    if len(player.videobox[frameCounter].timestamp) > 0:
+                        timeId = player.videobox[frameCounter].timestamp[0]
+                    else:
+                        timeId = player.time_buff[frameCounter]
+                    player.videobox[frameCounter].addBox(timeId, None, [x,y,w,h], ['Clear'])
+                    self.repaint()
+        self.moved = False
+        self.drag_start = None
+        self.index = None
         
     def resizeEvent(self, event):
         QWidget.resizeEvent(self, event)
@@ -987,21 +981,20 @@ class VideoPlayer(QWidget):
                     for idx, key in enumerate(self.box_buffer):
                         if key[0] == 0:
                             counter += 1
-                            self.videobox[counter].addBox(self.time_buff[counter], key, self.box_actionBuffer[idx])
+                            self.videobox[counter].addBox(self.time_buff[counter], key[0], key[1:], self.box_actionBuffer[idx])
                         else:
-                            self.videobox[counter].addBox(self.time_buff[counter], key, self.box_actionBuffer[idx])
+                            self.videobox[counter].addBox(self.time_buff[counter], key[0], key[1:], self.box_actionBuffer[idx])
                 else:
                     for idx, key in enumerate(self.box_buffer):
                         if key[0] == 0:
                             counter += 1
-                            self.videobox[counter].addBox(self.time_buff[counter], key, ['Clear'])
+                            self.videobox[counter].addBox(self.time_buff[counter], key[0], key[1:], ['Clear'])
                         else:
-                            self.videobox[counter].addBox(self.time_buff[counter], key, ['Clear'])
+                            self.videobox[counter].addBox(self.time_buff[counter], key[0], key[1:], ['Clear'])
                 
                 gantChart.axes.clear()
                 gantChart.drawChart(self.videobox, framerate)
                 gantChart.draw()
-            print len(self.videobox)
         else:
             self.errorMessages(10)
 		
@@ -1184,10 +1177,21 @@ class boundBox(object):
         self.box_Param = []
         self.annotation = []
 
-    def addBox(self, time, key, classify):
+    def addBox(self, time, box_id, params, classify):
         self.timestamp.append(time)
-        self.box_id.append(key[0])
-        self.box_Param.append(key[1:])
+        
+        boxNumber = -1
+        if box_id is None:
+            #If id already in the list then give the next id
+            for i in range(len(self.box_id)):
+                if(i != self.box_id[i]):
+                    boxNumber = i
+            if boxNumber == -1:
+                boxNumber = len(player.videobox[frameCounter].box_id)
+        else:
+            boxNumber = box_id
+        self.box_id.append(boxNumber)
+        self.box_Param.append(params[::])
         self.annotation.append(classify)
 
         self.calcAngle()
@@ -1203,7 +1207,7 @@ class boundBox(object):
         self.box_id.pop(boxid)
         self.box_Param.pop(boxid)
         self.annotation.pop(boxid)
-
+        
     #Handles the annotation for basic and high level classes
     def changeClass(self, boxid, classify):
         global classLabels
@@ -1216,7 +1220,7 @@ class boundBox(object):
                     self.annotation[boxid].append(classify)
 
     #Remove high level events
-    def removeEvent(self,boxid,action):
+    def removeEvent(self, boxid, action):
         global frameCounter
         #boxid is the index of boxes
         for key in self.annotation[boxid]:
