@@ -29,7 +29,6 @@ def buffer_rgb_data(bag, input_topic, compressed):
     time_buff  = []
     start_time = None
     bridge     = CvBridge()
-    count = 0
     #Buffer the images, timestamps from the rosbag
     for topic, msg, t in bag.read_messages(topics=[input_topic]):
         if start_time is None:
@@ -45,8 +44,6 @@ def buffer_rgb_data(bag, input_topic, compressed):
             nparr = np.fromstring(msg.data, np.uint8)
             cv_image = cv2.imdecode(nparr, cv2.CV_LOAD_IMAGE_COLOR)
 	
-	cv2.imwrite("/home/dimitris/projectsPython/RoboMAE/robomae/bag/asd/"+str(count) + ".png", cv_image)
-	count +=1
         image_buff.append(cv_image)
         time_buff.append(t.to_sec() - start_time.to_sec())
 
@@ -136,7 +133,7 @@ def write_rgb_video(rgbFileName, image_buffer, framerate):
 	
 	if video_writer.isOpened():
 		result = True
-		#print("Video initialized")
+		
 		for frame in image_buffer:
 			video_writer.write(frame)
 		video_writer.release()
