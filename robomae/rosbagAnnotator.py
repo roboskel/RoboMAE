@@ -965,36 +965,38 @@ class VideoPlayer(QWidget):
         self.metric_buffer = []
         
         if bagFile is not None:
+            
             # OPEN VIDEO - DEPTH - AUDIO
             fileName,_ =  QFileDialog.getOpenFileName(self, "Open Csv ", os.path.dirname(os.path.abspath(bagFile)),"(*.csv)")
-            box_buff, metrics_buff, box_action = rosbagRGB.buffer_video_csv(fileName)
-            
-            if not (box_buff or metrics_buff):
-                self.errorMessages(1)
-            else:
-                self.box_buffer = [list(elem) for elem in box_buff]
-                self.metric_buffer = [list(key) for key in metrics_buff]
-                #Frame counter initialize
-                counter = 0
-                if len(box_action) > 0:
-                    self.box_actionBuffer = [key for key in box_action]
-                    for idx, key in enumerate(self.box_buffer):
-                        if key[0] == 0:
-                            counter += 1
-                            self.videobox[counter].addBox(self.time_buff[counter], key[0], key[1:], self.box_actionBuffer[idx])
-                        else:
-                            self.videobox[counter].addBox(self.time_buff[counter], key[0], key[1:], self.box_actionBuffer[idx])
-                else:
-                    for idx, key in enumerate(self.box_buffer):
-                        if key[0] == 0:
-                            counter += 1
-                            self.videobox[counter].addBox(self.time_buff[counter], key[0], key[1:], ['Clear'])
-                        else:
-                            self.videobox[counter].addBox(self.time_buff[counter], key[0], key[1:], ['Clear'])
+            if fileName:
+                box_buff, metrics_buff, box_action = rosbagRGB.buffer_video_csv(fileName)
                 
-                gantChart.axes.clear()
-                gantChart.drawChart(self.videobox, framerate)
-                gantChart.draw()
+                if not (box_buff or metrics_buff):
+                    self.errorMessages(1)
+                else:
+                    self.box_buffer = [list(elem) for elem in box_buff]
+                    self.metric_buffer = [list(key) for key in metrics_buff]
+                    #Frame counter initialize
+                    counter = 0
+                    if len(box_action) > 0:
+                        self.box_actionBuffer = [key for key in box_action]
+                        for idx, key in enumerate(self.box_buffer):
+                            if key[0] == 0:
+                                counter += 1
+                                self.videobox[counter].addBox(self.time_buff[counter], key[0], key[1:], self.box_actionBuffer[idx])
+                            else:
+                                self.videobox[counter].addBox(self.time_buff[counter], key[0], key[1:], self.box_actionBuffer[idx])
+                    else:
+                        for idx, key in enumerate(self.box_buffer):
+                            if key[0] == 0:
+                                counter += 1
+                                self.videobox[counter].addBox(self.time_buff[counter], key[0], key[1:], ['Clear'])
+                            else:
+                                self.videobox[counter].addBox(self.time_buff[counter], key[0], key[1:], ['Clear'])
+                    
+                    gantChart.axes.clear()
+                    gantChart.drawChart(self.videobox, framerate)
+                    gantChart.draw()
         else:
             self.errorMessages(10)
 		
