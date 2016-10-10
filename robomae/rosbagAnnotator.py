@@ -424,10 +424,16 @@ class VideoWidget(QWidget):
                     player.videobox[frameCounter].box_Param[self.index] =  event.pos().x() - (st_x - x), event.pos().y() - (st_y - y), w, h
                     self.repaint()
                 else:
-                    x = QPoint.pos1.x()
-                    y = QPoint.pos1.y()
-                    w = event.pos().x() - QPoint.pos1.x()
-                    h = event.pos().y() - QPoint.pos1.y()
+                    if QPoint.pos1.x() < event.pos().x():
+                        x = QPoint.pos1.x()
+                    else:
+                        x = event.pos().x()
+                    if QPoint.pos1.y() < event.pos().y():
+                        y = QPoint.pos1.y()
+                    else:
+                        y = event.pos().y()
+                    w = abs(event.pos().x() - QPoint.pos1.x())
+                    h = abs(event.pos().y() - QPoint.pos1.y())
                     if len(player.videobox[frameCounter].timestamp) > 0:
                         timeId = player.videobox[frameCounter].timestamp[0]
                     else:
