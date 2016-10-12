@@ -72,6 +72,7 @@ from gui import rosbagGui
 
 global bagFile
 global csvFile
+global videoCSV
 global frameCounter
 global boxInitialized
 global annotationColors
@@ -83,7 +84,7 @@ global classLabels
 global highLabels
 
 bagFile = None
-csvFile = None
+videoCSV = None
 frameCounter = 0
 boxInitialized = False
 annotationColors = ['#00FF00', '#FF00FF','#FFFF00','#00FFFF','#FFA500','#C0C0C0','#000000','#EAEAEA']
@@ -902,7 +903,7 @@ class VideoPlayer(QWidget):
 							self.time_buff.append(t.to_sec() - start_time.to_sec())
 					else:
 						#Get bag video metadata
-						print colored('Get rgb data from ROS', 'green')
+						print colored('Getting rgb data from ROS', 'green')
 						(image_buffer, self.time_buff) = rosbagRGB.buffer_rgb_data(bag, self.topic_window.temp_topics[2][1], compressed)
 						if not image_buffer:
 							raise Exception(8)
@@ -967,6 +968,7 @@ class VideoPlayer(QWidget):
     def openCsv(self):
         global framerate
         global bagFile
+        global videoCSV
         self.box_buffer = []
         self.metric_buffer = []
         
@@ -975,6 +977,7 @@ class VideoPlayer(QWidget):
             # OPEN VIDEO - DEPTH - AUDIO
             fileName,_ =  QFileDialog.getOpenFileName(self, "Open Csv ", os.path.dirname(os.path.abspath(bagFile)),"(*.csv)")
             if fileName:
+                videoCSV = fileName
                 box_buff, metrics_buff, box_action = rosbagRGB.buffer_video_csv(fileName)
                 
                 if not (box_buff or metrics_buff):
@@ -1112,50 +1115,52 @@ class VideoPlayer(QWidget):
     #Writes the boxes to csv
     def writeCSV(self):
         global bagFile
-        list_insert_time = []
-        list_insert_box = []
-        list_insert_class = []
-        list_insert_param_1 = []
-        list_insert_param_2 = []
-        list_insert_param_3 = []
-        list_insert_param_4 = []
-        list_metr_param_1 = []
-        list_metr_param_2 = []
-        list_metr_param_3 = []
-        list_metr_param_4 = []
-        list_metr_param_5 = []
-        list_metr_param_6 = []
+        global videoCSV
+        if bagFile and videoCSV:
+            list_insert_time = []
+            list_insert_box = []
+            list_insert_class = []
+            list_insert_param_1 = []
+            list_insert_param_2 = []
+            list_insert_param_3 = []
+            list_insert_param_4 = []
+            list_metr_param_1 = []
+            list_metr_param_2 = []
+            list_metr_param_3 = []
+            list_metr_param_4 = []
+            list_metr_param_5 = []
+            list_metr_param_6 = []
 
-        for i in self.videobox:
-            for j in i.timestamp:
-                list_insert_time.append(j)
-            for k in i.box_id:
-                list_insert_box.append(k)
-            for l in i.box_Param:
-                list_insert_param_1.append(l[0])
-                list_insert_param_2.append(l[1])
-                list_insert_param_3.append(l[2])
-                list_insert_param_4.append(l[3])
-            for key in i.annotation:
-                list_insert_class.append(key)
+            for i in self.videobox:
+                for j in i.timestamp:
+                    list_insert_time.append(j)
+                for k in i.box_id:
+                    list_insert_box.append(k)
+                for l in i.box_Param:
+                    list_insert_param_1.append(l[0])
+                    list_insert_param_2.append(l[1])
+                    list_insert_param_3.append(l[2])
+                    list_insert_param_4.append(l[3])
+                for key in i.annotation:
+                    list_insert_class.append(key)
 
-        if len(self.metric_buffer) > 0:
-            for metr in self.metric_buffer:
-                list_metr_param_1.append(metr[0])
-                list_metr_param_2.append(metr[1])
-                list_metr_param_3.append(metr[2])
-                list_metr_param_4.append(metr[3])
-                list_metr_param_5.append(metr[4])
-                list_metr_param_6.append(metr[5])
-        
-        csvFileName = bagFile.replace(".bag","_out.csv")
-        with open(csvFileName, 'w') as file:
-            csv_writer = csv.writer(file, delimiter='\t')
-            headlines = ['Timestamp','Rect_id', 'Rect_x','Rect_y','Rect_W','Rect_H','Class','Meter_X','Meter_Y','Meter_Z','Top','Height' ,'Distance']
-            csv_writer.writerow(headlines)
-            rows = zip(list_insert_time,list_insert_box,list_insert_param_1,list_insert_param_2,list_insert_param_3,list_insert_param_4,list_insert_class,list_metr_param_1,list_metr_param_2,list_metr_param_3,list_metr_param_4,list_metr_param_5,list_metr_param_6)
-            csv_writer.writerows(rows)
-        print "Csv written at: ", csvFileName
+            if len(self.metric_buffer) > 0:
+                for metr in self.metric_buffer:
+                    list_metr_param_1.append(metr[0])
+                    list_metr_param_2.append(metr[1])
+                    list_metr_param_3.append(metr[2])
+                    list_metr_param_4.append(metr[3])
+                    list_metr_param_5.append(metr[4])
+                    list_metr_param_6.append(metr[5])
+            
+            csvFileName = bagFile.replace(".bag","_out.csv")
+            with open(csvFileName, 'w') as file:
+                csv_writer = csv.writer(file, delimiter='\t')
+                headlines = ['Timestamp','Rect_id', 'Rect_x','Rect_y','Rect_W','Rect_H','Class','Meter_X','Meter_Y','Meter_Z','Top','Height' ,'Distance']
+                csv_writer.writerow(headlines)
+                rows = zip(list_insert_time,list_insert_box,list_insert_param_1,list_insert_param_2,list_insert_param_3,list_insert_param_4,list_insert_class,list_metr_param_1,list_metr_param_2,list_metr_param_3,list_metr_param_4,list_metr_param_5,list_metr_param_6)
+                csv_writer.writerows(rows)
+            print "Csv written at: ", csvFileName
    
     def closeEvent(self, event):
         self.writeCSV()
@@ -1315,7 +1320,7 @@ class MainWindow(QMainWindow):
         self.saveCsvAct = QAction("&Save video csv", self, shortcut="Ctrl+S",
             statusTip="Save csv", triggered=self.saveCSV)
         self.quitAct = QAction("&Quit", self, shortcut="Ctrl+Q",
-            statusTip="Quit", triggered=self.close)
+            statusTip="Quit", triggered=self.closeEvent)
         
     def openBag(self):
         player.openFile()
@@ -1327,8 +1332,38 @@ class MainWindow(QMainWindow):
         player.writeCSV()
      
     def close(self):
-        player.closeEvent(self)
-        sys.exit(app)
+        sys.exit(app) 
+        
+    def saveAndClose(self):
+        player.writeCSV()
+        sys.exit(app) 
+    
+    def closeEvent(self, event):
+        global bagFile
+        global videoCSV
+        if bagFile and videoCSV:
+            msgBox = QMessageBox()
+            msgBox.setIcon(msgBox.Warning)
+            msgBox.setWindowTitle("Quit")
+            msgBox.setText("<b><font size=\"5\">You may have unfinished work")
+            msgBox.setInformativeText("Do you want to save before quitting?")
+            yesButton = QPushButton()
+            yesButton.setText("Yes")
+            yesButton.clicked.connect(self.saveAndClose)
+            msgBox.addButton(yesButton, QMessageBox.YesRole)
+            
+            noButton = QPushButton()
+            noButton.setText("No")
+            noButton.clicked.connect(self.close)
+            msgBox.addButton(noButton, QMessageBox.NoRole)
+            
+            cancelButton = QPushButton()
+            cancelButton.setText("Cancel")
+            msgBox.addButton(cancelButton, QMessageBox.RejectRole)
+            retval = msgBox.exec_()
+            if retval == 2:
+                event.ignore()
+   
     
 if __name__ == '__main__':
     os.system('cls' if os.name == 'nt' else 'clear')
