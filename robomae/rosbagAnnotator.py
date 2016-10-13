@@ -314,7 +314,7 @@ class VideoWidget(QWidget):
                     player.videobox[frameCounter].removeAllBox()
                 elif action == changeId:
                     #Call the textbox
-                    self.newBoxId = rosbagGui.textBox(player.videobox, posX, posY, frameCounter, gantChart, framerate)
+                    self.newBoxId = rosbagGui.textBox(player.videobox, index, frameCounter, gantChart, framerate)
                     self.newBoxId.setGeometry(QRect(500, 100, 300, 100))
                     self.newBoxId.show()
                 

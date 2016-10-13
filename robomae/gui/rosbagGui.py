@@ -10,28 +10,27 @@ from PyQt5.QtMultimediaWidgets import *
 #Class for box id change
 class textBox(QWidget):
 
-    def __init__(self, videobox, posX, posY, frameCounter, gantChart, framerate):
+    def __init__(self, videobox, index, frameCounter, gantChart, framerate):
 
         QWidget.__init__(self)
         self.videobox = videobox
-        self.posX = posX
-        self.posY = posY
+        self.index = index
         self.frameCounter = frameCounter
         self.framerate = framerate
         self.gantChart = gantChart
         self.setWindowTitle('Set Box id')
         self.main_widget = QWidget(self)
-        self.boxId = QLineEdit(self)
         self.Ok = QPushButton("Ok", self)
-        self.boxId.textChanged.connect(self.boxChanged)
         self.Ok.clicked.connect(self.closeTextBox)
+        self.Ok.move(115, 60)
+        self.Ok.show()
+        
+        self.boxId = QLineEdit(self)
+        self.boxId.textChanged.connect(self.boxChanged)
         self.boxId.setPlaceholderText('Box Id:')
         self.boxId.setMinimumWidth(100)
         self.boxId.setEnabled(True)
-
         self.boxId.move(90, 15)
-        self.Ok.move(115, 60)
-        self.Ok.show()
         self.boxId.show()
 
     def boxChanged(self,text):
@@ -43,40 +42,29 @@ class textBox(QWidget):
         except:
             msgBox = QMessageBox()
             msgBox.setText("Wrong type, integer expected")
-            msgBox.resize(100,40)
+            msgBox.setIcon(msgBox.Warning)
+            msgBox.setWindowTitle("Error")
             msgBox.exec_()
+            self.close()
 
         #Check id
-        for i in range(len(self.videobox[self.frameCounter].box_id)):
-            if self.box_Idx == self.videobox[self.frameCounter].box_id[i]:
-                #Box Id already given
-                msgBox = QMessageBox()
-                msgBox.setText("Box Id already given")
-                msgBox.resize(100,40)
-                msgBox.exec_()
-
-        for i in range(len(self.videobox[self.frameCounter].box_id)):
-            x,y,w,h = self.videobox[self.frameCounter].box_Param[i]
-            if self.posX > x and self.posX  < (x+w) and self.posY > y and self.posY < (y+h):
-                old_value = self.videobox[self.frameCounter].box_id[i]
-                self.videobox[self.frameCounter].box_id[i] = self.box_Idx
-                self.writeEnable = True
-                self.frameNumber = self.frameCounter
-                old_index = i
-                break
-
-        if self.writeEnable:
-            while self.frameNumber < len(self.videobox):
-                if old_value in self.videobox[self.frameNumber].box_id:
-                    self.videobox[self.frameNumber].box_id[old_index] = self.box_Idx
-                self.frameNumber += 1
-            self.writeEnable = False
-            
-        self.gantChart.axes.clear()
-        self.gantChart.drawChart(self.videobox, self.framerate)
-        self.gantChart.draw()
-        self.Ok.clicked.disconnect()
-        self.close()
+        if self.box_Idx in self.videobox[self.frameCounter].box_id:
+            #Box Id already given
+            msgBox = QMessageBox()
+            msgBox.setText("Box Id already given")
+            msgBox.setIcon(msgBox.Warning)
+            msgBox.setWindowTitle("Error")
+            msgBox.exec_()
+        else:
+            while self.frameCounter < len(self.videobox):
+                if(self.index < len(self.videobox[self.frameCounter].box_id)):
+                    self.videobox[self.frameCounter].box_id[self.index] = self.box_Idx
+                self.frameCounter += 1
+            self.gantChart.axes.clear()
+            self.gantChart.drawChart(self.videobox, self.framerate)
+            self.gantChart.draw()
+            self.Ok.clicked.disconnect()
+            self.close()
 
 
 #Class for Drop down boxes about topic selection
