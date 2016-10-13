@@ -260,7 +260,7 @@ class VideoWidget(QWidget):
             #Initiate add Event menu
             for label in highLabels:
                 self.addEventLabels.append(addEvent.addAction(label))
-            #changeId = menu.addAction('Change Id')
+            changeId = menu.addAction('Change Id')
             
             index = -1
             stopEvent.setEnabled(False)
@@ -274,10 +274,10 @@ class VideoWidget(QWidget):
                     index = i
                     
             if index != -1:             
-                box_id = player.videobox[frameCounter].box_id.index(index)
+                box_id = player.videobox[frameCounter].box_id[index]
                 #Show only annotated high classes of the box
                 if len(player.videobox[frameCounter].annotation) > 0:
-                    for annot in player.videobox[frameCounter].annotation[box_id]:
+                    for annot in player.videobox[frameCounter].annotation[index]:
                         if annot in highLabels and annot not in self.checkStopEventMenu:
                             self.checkStopEventMenu.append(annot)
                             self.stopEventLabels.append(stopEvent.addAction(annot))
@@ -312,11 +312,11 @@ class VideoWidget(QWidget):
                     player.videobox[frameCounter].removeSpecBox(player.videobox[frameCounter].box_id[index])
                 elif action ==  deleteAllBoxes:
                     player.videobox[frameCounter].removeAllBox()
-                #~ elif action == changeId:
-                    #~ #Call the textbox
-                    #~ self.newBoxId = rosbagGui.textBox(player.videobox, posX, posY, frameCounter, gantChart, framerate)
-                    #~ self.newBoxId.setGeometry(QRect(500, 100, 300, 100))
-                    #~ self.newBoxId.show()
+                elif action == changeId:
+                    #Call the textbox
+                    self.newBoxId = rosbagGui.textBox(player.videobox, posX, posY, frameCounter, gantChart, framerate)
+                    self.newBoxId.setGeometry(QRect(500, 100, 300, 100))
+                    self.newBoxId.show()
                 
                 if self.annotEnabled:
                     for counter in range(frameCounter, len(player.videobox)):
@@ -1126,11 +1126,13 @@ class VideoPlayer(QWidget):
                 for i in range(0, len(self.videobox)):
                     box = self.videobox[i]
                     if len(box.box_id) > 0:
-                        for j in box.box_id:
-                            if j != -1:
+                        for j in range(0, len(box.box_id)):
+                            if box.box_id[j] != -1:
                                 box_param = ",".join(map(repr,box.box_Param[j][::]))
                                 metrics = ",".join(map(repr, self.metric_buffer[i][::]))
-                                csv_writer.writerow((box.timestamp[0], j, box_param, box.annotation[j], metrics))
+                                csv_writer.writerow((box.timestamp[0], box.box_id[j], box_param, box.annotation[j], metrics))
+                            else:
+                                csv_writer.writerow(box.timestamp)
                     else:
                         csv_writer.writerow([self.time_buff[i]])
                     

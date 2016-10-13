@@ -47,19 +47,19 @@ class textBox(QWidget):
             msgBox.exec_()
 
         #Check id
-        for i in range(len(self.videobox[self.frameCounter].box_Id)):
-            if self.box_Idx == self.videobox[self.frameCounter].box_Id[i]:
+        for i in range(len(self.videobox[self.frameCounter].box_id)):
+            if self.box_Idx == self.videobox[self.frameCounter].box_id[i]:
                 #Box Id already given
                 msgBox = QMessageBox()
                 msgBox.setText("Box Id already given")
                 msgBox.resize(100,40)
                 msgBox.exec_()
 
-        for i in range(len(self.videobox[self.frameCounter].box_Id)):
+        for i in range(len(self.videobox[self.frameCounter].box_id)):
             x,y,w,h = self.videobox[self.frameCounter].box_Param[i]
             if self.posX > x and self.posX  < (x+w) and self.posY > y and self.posY < (y+h):
-                old_value = self.videobox[self.frameCounter].box_Id[i]
-                self.videobox[self.frameCounter].box_Id[i] = self.box_Idx
+                old_value = self.videobox[self.frameCounter].box_id[i]
+                self.videobox[self.frameCounter].box_id[i] = self.box_Idx
                 self.writeEnable = True
                 self.frameNumber = self.frameCounter
                 old_index = i
@@ -67,8 +67,8 @@ class textBox(QWidget):
 
         if self.writeEnable:
             while self.frameNumber < len(self.videobox):
-                if old_value in self.videobox[self.frameNumber].box_Id:
-                    self.videobox[self.frameNumber].box_Id[old_index] = self.box_Idx
+                if old_value in self.videobox[self.frameNumber].box_id:
+                    self.videobox[self.frameNumber].box_id[old_index] = self.box_Idx
                 self.frameNumber += 1
             self.writeEnable = False
             
