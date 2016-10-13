@@ -990,16 +990,16 @@ class VideoPlayer(QWidget):
                     if len(box_action) > 0:
                         self.box_actionBuffer = [key for key in box_action]
                         for idx, key in enumerate(self.box_buffer):
-                            if key[0] == 0:
+                            if key[0] <= 0:
                                 counter += 1
                                 self.videobox[counter].addBox(self.time_buff[counter], key[0], key[1:], self.box_actionBuffer[idx])
                             else:
                                 self.videobox[counter].addBox(self.time_buff[counter], key[0], key[1:], self.box_actionBuffer[idx])
                     else:
                         for idx, key in enumerate(self.box_buffer):
-                            if key[0] == 0:
-                                counter += 1
+                            if key[0] <= 0:
                                 self.videobox[counter].addBox(self.time_buff[counter], key[0], key[1:], ['Clear'])
+                                counter += 1
                             else:
                                 self.videobox[counter].addBox(self.time_buff[counter], key[0], key[1:], ['Clear'])
                     
@@ -1117,50 +1117,24 @@ class VideoPlayer(QWidget):
         global bagFile
         global videoCSV
         if bagFile and videoCSV:
-            list_insert_time = []
-            list_insert_box = []
-            list_insert_class = []
-            list_insert_param_1 = []
-            list_insert_param_2 = []
-            list_insert_param_3 = []
-            list_insert_param_4 = []
-            list_metr_param_1 = []
-            list_metr_param_2 = []
-            list_metr_param_3 = []
-            list_metr_param_4 = []
-            list_metr_param_5 = []
-            list_metr_param_6 = []
-
-            for i in self.videobox:
-                for j in i.timestamp:
-                    list_insert_time.append(j)
-                for k in i.box_id:
-                    list_insert_box.append(k)
-                for l in i.box_Param:
-                    list_insert_param_1.append(l[0])
-                    list_insert_param_2.append(l[1])
-                    list_insert_param_3.append(l[2])
-                    list_insert_param_4.append(l[3])
-                for key in i.annotation:
-                    list_insert_class.append(key)
-
-            if len(self.metric_buffer) > 0:
-                for metr in self.metric_buffer:
-                    list_metr_param_1.append(metr[0])
-                    list_metr_param_2.append(metr[1])
-                    list_metr_param_3.append(metr[2])
-                    list_metr_param_4.append(metr[3])
-                    list_metr_param_5.append(metr[4])
-                    list_metr_param_6.append(metr[5])
             
             csvFileName = bagFile.replace(".bag","_out.csv")
             with open(csvFileName, 'w') as file:
                 csv_writer = csv.writer(file, delimiter='\t')
                 headlines = ['Timestamp','Rect_id', 'Rect_x','Rect_y','Rect_W','Rect_H','Class','Meter_X','Meter_Y','Meter_Z','Top','Height' ,'Distance']
                 csv_writer.writerow(headlines)
-                rows = zip(list_insert_time,list_insert_box,list_insert_param_1,list_insert_param_2,list_insert_param_3,list_insert_param_4,list_insert_class,list_metr_param_1,list_metr_param_2,list_metr_param_3,list_metr_param_4,list_metr_param_5,list_metr_param_6)
-                csv_writer.writerows(rows)
-            print "Csv written at: ", csvFileName
+                for i in range(0, len(self.videobox)):
+                    box = self.videobox[i]
+                    if len(box.box_id) > 0:
+                        for j in box.box_id:
+                            if j != -1:
+                                box_param = ",".join(map(repr,box.box_Param[j][::]))
+                                metrics = ",".join(map(repr, self.metric_buffer[i][::]))
+                                csv_writer.writerow((box.timestamp[0], j, box_param, box.annotation[j], metrics))
+                    else:
+                        csv_writer.writerow([self.time_buff[i]])
+                    
+                print "Csv written at: ", csvFileName
    
     def closeEvent(self, event):
         self.writeCSV()
@@ -1361,7 +1335,7 @@ class MainWindow(QMainWindow):
             cancelButton.setText("Cancel")
             msgBox.addButton(cancelButton, QMessageBox.RejectRole)
             retval = msgBox.exec_()
-            if retval == 2:
+            if retval == 2 and type(event) != bool:
                 event.ignore()
    
     
