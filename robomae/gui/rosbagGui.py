@@ -18,12 +18,10 @@ class textBox(QWidget):
         self.frameCounter = frameCounter
         self.framerate = framerate
         self.gantChart = gantChart
-        self.setWindowTitle('Set Box id')
-        self.main_widget = QWidget(self)
         self.Ok = QPushButton("Ok", self)
         self.Ok.clicked.connect(self.closeTextBox)
         self.Ok.move(115, 60)
-        self.Ok.show()
+        #~ self.Ok.show()
         
         self.boxId = QLineEdit(self)
         self.boxId.textChanged.connect(self.boxChanged)
@@ -31,8 +29,15 @@ class textBox(QWidget):
         self.boxId.setMinimumWidth(100)
         self.boxId.setEnabled(True)
         self.boxId.move(90, 15)
-        self.boxId.show()
+        #~ self.boxId.show()
 
+        flo = QFormLayout()
+        flo.addRow(self.boxId)
+        flo.addRow(self.Ok)
+        self.setLayout(flo)
+        self.setWindowTitle('Set Box id')
+        self.show()
+       
     def boxChanged(self,text):
         self.box_Idx = text
 

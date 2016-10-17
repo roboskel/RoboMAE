@@ -991,8 +991,8 @@ class VideoPlayer(QWidget):
                         self.box_actionBuffer = [key for key in box_action]
                         for idx, key in enumerate(self.box_buffer):
                             if key[0] <= 0:
-                                counter += 1
                                 self.videobox[counter].addBox(self.time_buff[counter], key[0], key[1:], self.box_actionBuffer[idx])
+                                counter += 1
                             else:
                                 self.videobox[counter].addBox(self.time_buff[counter], key[0], key[1:], self.box_actionBuffer[idx])
                     else:
@@ -1126,11 +1126,19 @@ class VideoPlayer(QWidget):
                 for i in range(0, len(self.videobox)):
                     box = self.videobox[i]
                     if len(box.box_id) > 0:
+                        master = []
                         for j in range(0, len(box.box_id)):
                             if box.box_id[j] != -1:
-                                box_param = ",".join(map(repr,box.box_Param[j][::]))
-                                metrics = ",".join(map(repr, self.metric_buffer[i][::]))
-                                csv_writer.writerow((box.timestamp[0], box.box_id[j], box_param, box.annotation[j], metrics))
+                                #~ box_param = "\t".join(map(repr,box.box_Param[j][::]))
+                                #~ metrics = "\t".join(map(repr, self.metric_buffer[i][::]))
+                                master.append(box.timestamp[0])
+                                master.append(box.box_id[j])
+                                for param in box.box_Param[j][::]:
+                                    master.append(param)
+                                master.append(box.annotation[j])
+                                for metric in self.metric_buffer[i][::]:
+                                    master.append(metric)
+                                csv_writer.writerow(master)
                             else:
                                 csv_writer.writerow(box.timestamp)
                     else:
