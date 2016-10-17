@@ -138,7 +138,6 @@ class VideoWidgetSurface(QAbstractVideoSurface):
     def start(self, _format):
         imageFormat = QVideoFrame.imageFormatFromPixelFormat(_format.pixelFormat())
         size = _format.frameSize()
-        #frameCounter = 0 #Frame Counter initialize
         if (imageFormat != QImage.Format_Invalid and not size.isEmpty()):
             self.imageFormat = imageFormat
             self.imageSize = size
@@ -159,16 +158,17 @@ class VideoWidgetSurface(QAbstractVideoSurface):
 
     def present(self, frame):
         global frameCounter
-        global removeBool
         if (self.surfaceFormat().pixelFormat() != frame.pixelFormat() or self.surfaceFormat().frameSize() != frame.size()):
             self.setError(QAbstractVideoSurface.IncorrectFormatError)
             self.stop()
             return False
         else:
-            
             frameCounter += 1
+            posSlider = player.positionSlider.value()
+            temp_counter = int(round((player.message_count * posSlider)/(player.duration * 1000)))
+            if temp_counter > frameCounter:
+                frameCounter = temp_counter
             self.currentFrame = frame
-            removeBool = True #Removes the boxes on current frame
             self.widget.repaint(self.targetRect)
             return True
 
@@ -227,7 +227,6 @@ class VideoWidget(QWidget):
         self.index = None
         self.moved = False
         
-
     def videoSurface(self):
         return self.surface
 
@@ -342,11 +341,8 @@ class VideoWidget(QWidget):
         global timeId
 
         painter = QPainter(self)
-        rectPainter = QPainter(self)
-        boxIdPainter = QPainter()
-
-        if not rectPainter.isActive():
-            rectPainter.begin(self)
+        
+        
 
         if (self.surface.isActive()):
             videoRect = QRegion(self.surface.videoRect())
@@ -361,7 +357,9 @@ class VideoWidget(QWidget):
             painter.fillRect(event.rect(), self.palette().window())
         
         
-        if len(player.videobox) > 0 and frameCounter < len(player.time_buff):
+        if len(player.videobox) > 0 and frameCounter < len(player.videobox):
+            rectPainter = QPainter(self)
+            boxIdPainter = QPainter()
             for i in range(len(player.videobox[frameCounter].box_id)):
                 if player.videobox[frameCounter].box_id != -1:
                     x,y,w,h = player.videobox[frameCounter].box_Param[i]
@@ -379,6 +377,7 @@ class VideoWidget(QWidget):
                     boxIdPainter.end()
         
         if self.moved and not event.rect().size().__eq__(self.surface.surfaceFormat().sizeHint()):
+            rectPainter = QPainter(self)
             if not rectPainter.isActive():
                 rectPainter.begin(self)    
             rectPainter.setRenderHint(QPainter.Antialiasing)    
@@ -386,8 +385,6 @@ class VideoWidget(QWidget):
             rectPainter.drawRect(event.rect())
             rectPainter.end()
             
-        if rectPainter.isActive():
-            rectPainter.end()
         
     #Mouse callback handling Boxes
     def mousePressEvent(self,event):
@@ -402,7 +399,6 @@ class VideoWidget(QWidget):
                     self.drag_start = (event.pos().x(), event.pos().y())
                     break
           
-    
     def mouseMoveEvent(self, event):
         if event.buttons() == QtCore.Qt.LeftButton:
             if self.index is not None:
@@ -622,7 +618,6 @@ class VideoPlayer(QWidget):
     #VIDEO SWITCH RGB <-> Depth
     def rgbVideo(self, enabled):
         global rgbFileName
-        global frameCounter
         if enabled:
             self. depthEnable = False
             self.rgbEnable = True
@@ -639,7 +634,6 @@ class VideoPlayer(QWidget):
 
     def depth(self, enabled):
         global depthFileName
-        global frameCounter
 
         if enabled:
             self.rgbEnable = False
@@ -762,8 +756,7 @@ class VideoPlayer(QWidget):
         if self.time_ >= self.end:
             self.audioStop()
             self.player.setPosition(self.start)
-            #self.positionSlider.setValue(self.start)
-
+            
     #LASER BUTTON FUNCTIONS
     def createLaserButtons(self, scanLayout):
         
@@ -1225,7 +1218,7 @@ class boundBox(object):
                 self.annotation[boxid].remove(key)
         frameNumber = frameCounter + 1
         #Annotate the box at remaining frames
-        while frameNumber < len(player.time_buff):
+        while frameNumber < len(player.videobox):
             if boxid >= len(player.videobox[frameNumber].box_id):
                 break
             if action in player.videobox[frameNumber].annotation[boxid]:
@@ -1294,7 +1287,6 @@ class MainWindow(QMainWindow):
         self.fileMenu.addAction(self.openCsvAct)
         self.fileMenu.addAction(self.saveCsvAct)
         self.fileMenu.addAction(self.quitAct)
-        
         
     def createActions(self):
         self.openBagAct = QAction("&Open rosbag", self, shortcut="Ctrl+B",
