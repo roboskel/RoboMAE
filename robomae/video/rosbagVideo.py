@@ -44,6 +44,5 @@ def buffer_video_metadata(bag, input_topic):
     
     #Get framerate
     framerate = messages/duration
-
     return messages, compressed, framerate
   

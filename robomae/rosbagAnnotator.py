@@ -164,10 +164,10 @@ class VideoWidgetSurface(QAbstractVideoSurface):
             return False
         else:
             frameCounter += 1
-            posSlider = player.positionSlider.value()
-            temp_counter = int(round((player.message_count * posSlider)/(player.duration * 1000)))
-            if temp_counter > frameCounter:
-                frameCounter = temp_counter
+            #~ posSlider = player.positionSlider.value()
+            #~ temp_counter = int(round((player.message_count * posSlider)/(player.duration * 1000)))
+            #~ if temp_counter > frameCounter:
+                #~ frameCounter = temp_counter
             self.currentFrame = frame
             self.widget.repaint(self.targetRect)
             return True
@@ -274,6 +274,7 @@ class VideoWidget(QWidget):
                     
             if index != -1:             
                 box_id = player.videobox[frameCounter].box_id[index]
+                print posX, posY, index, box_id, player.videobox[frameCounter].box_id
                 #Show only annotated high classes of the box
                 if len(player.videobox[frameCounter].annotation) > 0:
                     for annot in player.videobox[frameCounter].annotation[index]:
@@ -308,7 +309,7 @@ class VideoWidget(QWidget):
                         self.annotClass = classLabels[i]
                         self.annotEnabled = True
                 if action == deleteBox:
-                    player.videobox[frameCounter].removeSpecBox(player.videobox[frameCounter].box_id[index])
+                    player.videobox[frameCounter].removeSpecBox(index)
                 elif action ==  deleteAllBoxes:
                     player.videobox[frameCounter].removeAllBox()
                 elif action == changeId:
@@ -1137,7 +1138,7 @@ class VideoPlayer(QWidget):
                     else:
                         csv_writer.writerow([self.time_buff[i]])
                     
-                print "Csv written at: ", csvFileName
+                print "Csv written at: ", csvFileName      
    
     def closeEvent(self, event):
         self.writeCSV()
@@ -1192,11 +1193,11 @@ class boundBox(object):
         self.box_Param[:] = []
         self.annotation[:] = []
 
-    def removeSpecBox(self, boxid):
-        self.timestamp.pop(boxid)
-        self.box_id.pop(boxid)
-        self.box_Param.pop(boxid)
-        self.annotation.pop(boxid)
+    def removeSpecBox(self, index):
+        self.timestamp.pop(index)
+        self.box_id.pop(index)
+        self.box_Param.pop(index)
+        self.annotation.pop(index)
         
     #Handles the annotation for basic and high level classes
     def changeClass(self, boxid, classify):
