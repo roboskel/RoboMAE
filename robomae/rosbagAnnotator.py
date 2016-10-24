@@ -1,19 +1,20 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 
-import csv
-import yaml
-import cv2
 import os
-import rosbag
-import argparse
-import textwrap
-import rospy
+import csv
+import cv2
+import yaml
 import json
-import random
-import matplotlib
 import math
 import time
+import rospy
+import rosbag
+import random
+import argparse
+import textwrap
+import matplotlib
+import subprocess
 
 matplotlib.use("Qt5Agg")
 import matplotlib.pyplot as plt
@@ -162,11 +163,6 @@ class VideoWidgetSurface(QAbstractVideoSurface):
             return False
         else:
             frameCounter += 1
-            #~ posSlider = player.positionSlider.value()
-            #~ print frameCounter
-            #~ temp_counter = int(round((player.message_count * posSlider)/(player.duration * 1000)))
-            #~ if temp_counter > frameCounter:
-                #~ frameCounter = temp_counter
             self.currentFrame = frame
             self.widget.repaint(self.targetRect)
             return True
@@ -372,7 +368,6 @@ class VideoWidget(QWidget):
                     boxIdPainter.setPen(QColor(255,0,0))
                     boxIdPainter.drawText(QRectF(x+2,y,w,h),Qt.AlignLeft,str(player.videobox[frameCounter].box_id[i]))
                     boxIdPainter.end()
-                    #~ print player.videobox[frameCounter].timestamp
                     #~ print frameCounter
                     #~ print player.videobox[frameCounter].box_id, player.videobox[frameCounter].box_Param[i]
                     #~ temp = cv2.imread("/home/dimitris/projectsPython/RoboMAE/robomae/test/" + str(frameCounter) + ".png")
@@ -493,6 +488,7 @@ class VideoPlayer(QWidget):
         
         Topics              = None
         self.time_          = 0
+        self.time_dif       = 0
         self.duration       = 0
         self.message_count  = 0
         self.videobox       = []
@@ -558,13 +554,13 @@ class VideoPlayer(QWidget):
     def createSlider(self):
         self.positionSlider = QSlider(Qt.Horizontal)
         self.positionSlider.setMinimum(0)
-        self.positionSlider.setMaximum(audioGlobals.duration)
+        self.positionSlider.setMaximum(self.duration)
         self.positionSlider.setTickInterval(1)
         self.positionSlider.sliderMoved.connect(self.setPosition)
 
         #add label to slider about elapsed time
         self.label_tmp = '<b><FONT SIZE=3>{}</b>'
-        self.timelabel = QLabel(self.label_tmp.format('Time: ' + str(audioGlobals.duration)))
+        self.timelabel = QLabel(self.label_tmp.format('Time: ' + str(self.duration)))
 
 
         self.label = QHBoxLayout()
@@ -910,18 +906,14 @@ class VideoPlayer(QWidget):
                         result  = rosbagRGB.write_rgb_video(rgbFileName, image_buffer, framerate)
                         if not result:
                             raise Exception(2)
-                    
-                    (framerate, self.message_count, temp_duration) = rosbagRGB.video_metadata(rgbFileName)
-                    self.time_dif = self.duration - 
-                    #Initialize objects which are equal to frames
+                            
+                    (framerate, self.message_count, _) = rosbagRGB.video_metadata(rgbFileName)
                     self.videobox = [boundBox(count) for count in range(int(self.message_count))]    
-
+                    
+                    self.duration =  self.getLength(rgbFileName)
                 except Exception as e:
 					print e
-					self.errorMessages(e[0])
-				
-			
-			
+					self.errorMessages(e[0])	
 			#Laser Topic selection
             if self.topic_window.temp_topics[3][1] != 'Choose Topic':
                 try:
@@ -960,9 +952,16 @@ class VideoPlayer(QWidget):
             self.chart.draw()
 
             self.setWindowTitle(fileName + ' -> Annotation')
+            
         except:
             pass
-
+            
+    def getLength(self, input_video):
+        print input_video
+        result = subprocess.Popen('ffprobe -i ' + str(input_video) + ' -show_entries format=duration -v quiet -of csv="p=0"', stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
+        output = result.communicate()[0]
+        return float(output)
+    
     #Open CSV file
     def openCsv(self):
         global framerate
@@ -984,8 +983,7 @@ class VideoPlayer(QWidget):
                 else:
                     self.box_buffer = [list(elem) for elem in box_buff]
                     self.metric_buffer = [list(key) for key in metrics_buff]
-                    for time in time_buff:
-                        time = time + 
+                    
                     #Frame counter initialize
                     counter = -1
                     if len(box_action) > 0:
@@ -1049,7 +1047,6 @@ class VideoPlayer(QWidget):
 
     def play(self):
         global frameCounter
-        global durationSlider
         if self.mediaPlayer.state() == QMediaPlayer.PlayingState:
             self.videoPosition()
             self.mediaPlayer.pause()
@@ -1074,7 +1071,7 @@ class VideoPlayer(QWidget):
         posSlider = self.positionSlider.value()
         #self.tickLabel.setAlignment(posSlider)
         frameCounter = int(round((self.message_count * posSlider)/(self.duration * 1000)))
-        #~ print frameCounter
+
 
     def mediaStateChanged(self, state):
         if state == QMediaPlayer.PlayingState:
@@ -1098,8 +1095,6 @@ class VideoPlayer(QWidget):
             self.controlEnabled = False
 
     def durationChanged(self, duration):
-        global durationSlider
-        durationSlider = duration
         self.positionSlider.setRange(0, duration)
 
     def setPosition(self, position):
