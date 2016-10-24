@@ -36,6 +36,7 @@ def buffer_rgb_data(bag, input_topic, compressed):
 
         #Get the image
         if not compressed:
+	    
             try:
                 cv_image = bridge.imgmsg_to_cv2(msg, "bgr8")
             except CvBridgeError as e:
@@ -72,18 +73,7 @@ def buffer_video_csv(csv_file):
             row_1 = next(csv_reader)
             try:
 		index = [x.strip() for x in row_1].index('Rect_id')
-		if 'Class' not in row_1:
-		    for row in csv_reader:
-			if len(row) > 2:
-			    (rec_id,x, y, width, height) = map(int, row[index:index + 5])
-			    (meter_X, meter_Y, meter_Z, top,meter_h, distance) = map(float, row[(index+5)::])
-			    box_buff.append((rec_id, x, y, width, height))
-			    metrics.append((meter_X, meter_Y, meter_Z, top, meter_h, distance))
-			else:
-			    box_buff.append((-1, 0, 0, 0, 0))
-			    metrics.append((0, 0, 0, 0, 0, 0))
-			    
-		else:
+		if 'Class' in row_1:
 		    for row in csv_reader:
 			if len(row) > 2:
 			    (rec_id, x, y, width, height) = map(int, row[index:index + 5])
@@ -96,7 +86,7 @@ def buffer_video_csv(csv_file):
 				    string = ast.literal_eval(string)
 				    box_buff_action.append(string)
 				else:
-				    box_buff_action.append(string)
+				    box_buff_action.append("['Clear']")
 			    else:
 				box_buff_action.append(row[index+5])
 			    metrics.append((meter_X,meter_Y,meter_Z,top,meter_h,distance))
@@ -104,7 +94,17 @@ def buffer_video_csv(csv_file):
 			    box_buff_action.append("")
 			    box_buff.append((-1, 0, 0, 0, 0))
 			    metrics.append((0, 0, 0, 0, 0, 0))
-            except:
+		else:
+		    for row in csv_reader:
+			if len(row) > 2:
+			    (rec_id,x, y, width, height) = map(int, row[index:index + 5])
+			    (meter_X, meter_Y, meter_Z, top,meter_h, distance) = map(float, row[(index+5)::])
+			    box_buff.append((rec_id, x, y, width, height))
+			    metrics.append((meter_X, meter_Y, meter_Z, top, meter_h, distance))
+			else:
+			    box_buff.append((-1, 0, 0, 0, 0))
+			    metrics.append((0, 0, 0, 0, 0, 0))
+	    except:
                print("Error processing video csv")
     return box_buff, metrics, box_buff_action
 
@@ -133,11 +133,24 @@ def write_rgb_video(rgbFileName, image_buffer, framerate):
 	
 	if video_writer.isOpened():
 		result = True
-		
+		i= 0
 		for frame in image_buffer:
+			#~ cv2.imwrite("/home/dimitris/projectsPython/RoboMAE/robomae/test/" + str(i) + ".png", frame)
+			i +=1
 			video_writer.write(frame)
 		video_writer.release()
 		print colored('Video writen successfully', 'yellow')
+	#~ cap = cv2.VideoCapture(rgbFileName)
+	#~ i= 0
+	#~ while(True):
+	    
+	    #~ if cap is not None:
+		#~ ret, frame = cap.read()
+		#~ if frame is None:
+		    #~ cap.release()
+		    #~ break
+		#~ cv2.imwrite("/home/dimitris/projectsPython/RoboMAE/robomae/test/" + str(i) + ".png", frame)
+		#~ i +=1	    	
 	return result
     
 def video_metadata(rgbFileName):
