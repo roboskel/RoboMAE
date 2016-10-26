@@ -908,7 +908,7 @@ class VideoPlayer(QWidget):
                             raise Exception(2)
                             
                     (framerate, self.message_count, _) = rosbagRGB.video_metadata(rgbFileName)
-                    self.videobox = [boundBox(count) for count in range(int(self.message_count))]    
+                       
                     
                     self.duration =  self.getLength(rgbFileName)
                 except Exception as e:
@@ -957,7 +957,6 @@ class VideoPlayer(QWidget):
             pass
             
     def getLength(self, input_video):
-        print input_video
         result = subprocess.Popen('ffprobe -i ' + str(input_video) + ' -show_entries format=duration -v quiet -of csv="p=0"', stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
         output = result.communicate()[0]
         return float(output)
@@ -968,7 +967,6 @@ class VideoPlayer(QWidget):
         global bagFile
         global videoCSV
         self.box_buffer = []
-        self.metric_buffer = []
         
         if bagFile is not None:
             
@@ -976,13 +974,13 @@ class VideoPlayer(QWidget):
             fileName,_ =  QFileDialog.getOpenFileName(self, "Open Csv ", os.path.dirname(os.path.abspath(bagFile)),"(*.csv)")
             if fileName:
                 videoCSV = fileName
-                box_buff, metrics_buff, box_action = rosbagRGB.buffer_video_csv(fileName)
+                self.videobox = [boundBox(count) for count in range(int(self.message_count))] 
+                box_buff, box_action = rosbagRGB.buffer_video_csv(fileName)
                 
-                if not (box_buff or metrics_buff):
+                if not (box_buff):
                     self.errorMessages(1)
                 else:
                     self.box_buffer = [list(elem) for elem in box_buff]
-                    self.metric_buffer = [list(key) for key in metrics_buff]
                     
                     #Frame counter initialize
                     counter = -1
@@ -1126,9 +1124,7 @@ class VideoPlayer(QWidget):
                                 master.append(box.box_id[j])
                                 for param in box.box_Param[j][::]:
                                     master.append(param)
-                                master.append(box.annotation[j])
-                                for metric in self.metric_buffer[i][::]:
-                                    master.append(metric)
+                                master.append(box.annotation[j])    
                                 csv_writer.writerow(master)
                             else:
                                 csv_writer.writerow([box.timestamp])
@@ -1185,13 +1181,13 @@ class boundBox(object):
         self.calcAngle()
 
     def removeAllBox(self):
-        self.timestamp     = None
+        #~ self.timestamp     = None
         self.box_id[:]     = []
         self.box_Param[:]  = []
         self.annotation[:] = []
 
     def removeSpecBox(self, index):
-        self.timestamp = None
+        #~ self.timestamp = None
         self.box_id.pop(index)
         self.box_Param.pop(index)
         self.annotation.pop(index)

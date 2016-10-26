@@ -14,6 +14,7 @@ class textBox(QWidget):
 
         QWidget.__init__(self)
         self.videobox = videobox
+        self.box_Idx = None
         self.index = index
         self.frameCounter = frameCounter
         self.framerate = framerate
@@ -44,6 +45,24 @@ class textBox(QWidget):
     def closeTextBox(self):
         try:
             self.box_Idx = int(self.box_Idx)
+            #Check id
+            if self.box_Idx in self.videobox[self.frameCounter].box_id:
+                #Box Id already given
+                msgBox = QMessageBox()
+                msgBox.setText("Box Id already given")
+                msgBox.setIcon(msgBox.Warning)
+                msgBox.setWindowTitle("Error")
+                msgBox.exec_()
+            else:
+                while self.frameCounter < len(self.videobox):
+                    if(self.index < len(self.videobox[self.frameCounter].box_id)):
+                        self.videobox[self.frameCounter].box_id[self.index] = self.box_Idx
+                    self.frameCounter += 1
+                self.gantChart.axes.clear()
+                self.gantChart.drawChart(self.videobox, self.framerate)
+                self.gantChart.draw()
+                self.Ok.clicked.disconnect()
+                self.close()
         except:
             msgBox = QMessageBox()
             msgBox.setText("Wrong type, integer expected")
@@ -52,24 +71,7 @@ class textBox(QWidget):
             msgBox.exec_()
             self.close()
 
-        #Check id
-        if self.box_Idx in self.videobox[self.frameCounter].box_id:
-            #Box Id already given
-            msgBox = QMessageBox()
-            msgBox.setText("Box Id already given")
-            msgBox.setIcon(msgBox.Warning)
-            msgBox.setWindowTitle("Error")
-            msgBox.exec_()
-        else:
-            while self.frameCounter < len(self.videobox):
-                if(self.index < len(self.videobox[self.frameCounter].box_id)):
-                    self.videobox[self.frameCounter].box_id[self.index] = self.box_Idx
-                self.frameCounter += 1
-            self.gantChart.axes.clear()
-            self.gantChart.drawChart(self.videobox, self.framerate)
-            self.gantChart.draw()
-            self.Ok.clicked.disconnect()
-            self.close()
+        
 
 
 #Class for Drop down boxes about topic selection

@@ -72,6 +72,7 @@ class gantShow(videoGantChart):
                         else:
                             self.boxAtYaxes.append([boxIdx, allactions])
                             self.timeWithId.append([boxIdx, frame_index.timestamp, frame_index.annotation[frame_index.box_id.index(boxIdx)]])
+                            
         #Remove duplicates and sort the Y axes
         self.boxAtYaxes.sort()
         self.boxAtYaxes = list(k for k,_ in itertools.groupby(self.boxAtYaxes))
@@ -80,10 +81,10 @@ class gantShow(videoGantChart):
             self.tickY.append(key)
         for index in range(len(self.timeWithId)):
             for action in self.timeWithId[index][2]:
-                self.startTime,self.endTime = self.timeCalc(self.timeWithId,index,action)
+                self.startTime, self.endTime = self.timeCalc(self.timeWithId, index, action)
                 if self.timeWithId[index][1] == self.endTime:
                     self.color = self.getColor(action)
-                    self.axes.hlines(self.boxAtYaxes.index([self.timeWithId[index][0],action]), self.startTime,self.endTime+(1/framerate),linewidth=8,color=self.color)
+                    self.axes.hlines(self.boxAtYaxes.index([self.timeWithId[index][0],action]), self.startTime, self.endTime+(1/framerate),linewidth=8,color=self.color)
                 else:
                     self.color = self.getColor(action)
                     self.axes.hlines(self.boxAtYaxes.index([self.timeWithId[index][0],action]), self.startTime,self.endTime,linewidth=8,color=self.color)
@@ -98,7 +99,7 @@ class gantShow(videoGantChart):
         self.axes.grid(True)
 
     #Calculates the end time for each annotation to plot
-    def timeCalc(self,time,curr,activity):
+    def timeCalc(self, time, curr, activity):
         temp_id = time[curr][0]
         startTime = time[curr][1]
         endTime = time[curr][1]

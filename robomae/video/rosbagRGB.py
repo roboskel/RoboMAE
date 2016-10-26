@@ -77,7 +77,6 @@ def buffer_video_csv(csv_file):
 		    for row in csv_reader:
 			if len(row) > 2:
 			    (rec_id, x, y, width, height) = map(int, row[index:index + 5])
-			    (meter_X, meter_Y, meter_Z, top, meter_h, distance) = map(float, row[(index+6)::])
 			    box_buff.append((rec_id, x, y, width, height))
 			    if  isinstance(row[index+5], str):
 				string = row[index+5]
@@ -89,7 +88,6 @@ def buffer_video_csv(csv_file):
 				    box_buff_action.append("['Clear']")
 			    else:
 				box_buff_action.append(row[index+5])
-			    metrics.append((meter_X,meter_Y,meter_Z,top,meter_h,distance))
 			else:
 			    box_buff_action.append("")
 			    box_buff.append((-1, 0, 0, 0, 0))
@@ -98,15 +96,12 @@ def buffer_video_csv(csv_file):
 		    for row in csv_reader:
 			if len(row) > 2:
 			    (rec_id,x, y, width, height) = map(int, row[index:index + 5])
-			    (meter_X, meter_Y, meter_Z, top,meter_h, distance) = map(float, row[(index+5)::])
 			    box_buff.append((rec_id, x, y, width, height))
-			    metrics.append((meter_X, meter_Y, meter_Z, top, meter_h, distance))
 			else:
 			    box_buff.append((-1, 0, 0, 0, 0))
-			    metrics.append((0, 0, 0, 0, 0, 0))
 	    except:
                print("Error processing video csv")
-    return box_buff, metrics, box_buff_action
+    return box_buff, box_buff_action
 
 """
 Writes rgb video from buffer to selected path
