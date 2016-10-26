@@ -6,10 +6,13 @@ import csv
 import cv2
 import ast
 import yaml
+import subprocess
+
 from termcolor import colored
 from sensor_msgs.msg import Image
 from sensor_msgs.msg import CompressedImage
 from cv_bridge import CvBridge, CvBridgeError
+
 import rosbagVideo
 
 """
@@ -147,11 +150,12 @@ def write_rgb_video(rgbFileName, image_buffer, framerate):
 		#~ cv2.imwrite("/home/dimitris/projectsPython/RoboMAE/robomae/test/" + str(i) + ".png", frame)
 		#~ i +=1	    	
 	return result
-    
-def video_metadata(rgbFileName):
-    cap = cv2.VideoCapture(rgbFileName)
-    fps = round(cap.get(cv2.cv.CV_CAP_PROP_FPS))
-    count = round(cap.get(cv2.cv.CV_CAP_PROP_FRAME_COUNT))
-    duration = count/fps
-       
-    return fps, count, duration
+
+def get_metadata(input_video):
+    result = subprocess.Popen('ffprobe -i ' + str(input_video) + ' -show_entries format=duration -v quiet -of csv="p=0"', stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
+    duration = float(result.communicate()[0])
+    result = subprocess.Popen('ffprobe -v error -select_streams v:0 -show_entries stream=avg_frame_rate -of default=noprint_wrappers=1:nokey=1 ' + str(input_video), stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
+    framerate = result.communicate()[0]
+    framerate = float(framerate.split('/')[0])/float(framerate.split('/')[1])
+    return duration, framerate
+	    

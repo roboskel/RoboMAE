@@ -14,7 +14,6 @@ import random
 import argparse
 import textwrap
 import matplotlib
-import subprocess
 
 matplotlib.use("Qt5Agg")
 import matplotlib.pyplot as plt
@@ -907,10 +906,8 @@ class VideoPlayer(QWidget):
                         if not result:
                             raise Exception(2)
                             
-                    (framerate, self.message_count, _) = rosbagRGB.video_metadata(rgbFileName)
-                       
+                    self.duration, framerate =  rosbagRGB.get_metadata(rgbFileName)
                     
-                    self.duration =  self.getLength(rgbFileName)
                 except Exception as e:
 					print e
 					self.errorMessages(e[0])	
@@ -956,10 +953,7 @@ class VideoPlayer(QWidget):
         except:
             pass
             
-    def getLength(self, input_video):
-        result = subprocess.Popen('ffprobe -i ' + str(input_video) + ' -show_entries format=duration -v quiet -of csv="p=0"', stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
-        output = result.communicate()[0]
-        return float(output)
+
     
     #Open CSV file
     def openCsv(self):
