@@ -335,6 +335,8 @@ class VideoWidget(QWidget):
         global timeId
 
         painter = QPainter(self)
+        rectPainter = QPainter(self)
+        boxIdPainter = QPainter()
         
         if (self.surface.isActive()):
             videoRect = QRegion(self.surface.videoRect())
@@ -350,8 +352,6 @@ class VideoWidget(QWidget):
         
         
         if len(player.videobox) > 0 and frameCounter < len(player.videobox):
-            rectPainter = QPainter(self)
-            boxIdPainter = QPainter()
             for i in range(len(player.videobox[frameCounter].box_id)):
                 if player.videobox[frameCounter].box_id[i] != -1:
                     x,y,w,h = player.videobox[frameCounter].box_Param[i]
@@ -377,7 +377,6 @@ class VideoWidget(QWidget):
 
                         
         if self.moved and not event.rect().size().__eq__(self.surface.surfaceFormat().sizeHint()):
-            rectPainter = QPainter(self)
             if not rectPainter.isActive():
                 rectPainter.begin(self)    
             rectPainter.setRenderHint(QPainter.Antialiasing)    
