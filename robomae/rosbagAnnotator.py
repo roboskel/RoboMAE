@@ -258,7 +258,6 @@ class VideoWidget(QWidget):
             index = -1
             stopEvent.setEnabled(False)
             for i in range(len(player.videobox[frameCounter].box_id)):
-                self.addEventLabels = []
                 self.stopEventLabels = []
                 self.checkStopEventMenu = []
                 self.stopEventEnabled = False
@@ -285,8 +284,11 @@ class VideoWidget(QWidget):
                         self.stopEventEnabled = True
 
                 if self.addEventEnabled:
+                    print action, self.addEventLabels
                     for i, key in enumerate(self.addEventLabels):
+                        print key
                         if action == key:
+                            print action, key
                             self.annotClass = highLabels[i]
                             self.annotEnabled = True
                             self.addEventEnabled = False
@@ -312,6 +314,7 @@ class VideoWidget(QWidget):
                     self.newBoxId.show()
                 
                 if self.annotEnabled:
+                    print self.annotClass
                     for counter in range(frameCounter, len(player.videobox)):
                         if box_id in player.videobox[counter].box_id:
                             player.videobox[counter].changeClass(box_id, str(self.annotClass))
@@ -352,7 +355,6 @@ class VideoWidget(QWidget):
         
         
         if len(player.videobox) > 0 and frameCounter < len(player.videobox):
-            print len(player.videobox[frameCounter].box_Param), frameCounter
             for i in range(len(player.videobox[frameCounter].box_id)):
                 if player.videobox[frameCounter].box_id[i] != -1:
                     x,y,w,h = player.videobox[frameCounter].box_Param[i]

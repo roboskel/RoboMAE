@@ -82,7 +82,6 @@ def buffer_video_csv(csv_file):
 			box_buff.append((timestamp, rec_id, x, y, width, height))
 			if 'Class' in row_1:
 			    string = ast.literal_eval(row[6])
-			    print string
 			    box_buff_action.append(string)
 			else:
 			    box_buff_action.append(["Clear"])
