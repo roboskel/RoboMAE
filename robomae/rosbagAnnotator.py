@@ -334,8 +334,8 @@ class VideoWidget(QWidget):
         global frameCounter
         global timeId
 
-        painter = QPainter(self)
-        rectPainter = QPainter(self)
+        painter      = QPainter(self)
+        rectPainter  = QPainter()
         boxIdPainter = QPainter()
         
         if (self.surface.isActive()):
@@ -368,12 +368,6 @@ class VideoWidget(QWidget):
                     boxIdPainter.setPen(QColor(255,0,0))
                     boxIdPainter.drawText(QRectF(x+2,y,w,h),Qt.AlignLeft,str(player.videobox[frameCounter].box_id[i]))
                     boxIdPainter.end()
-                    #~ print frameCounter
-                    #~ print player.videobox[frameCounter].box_id, player.videobox[frameCounter].box_Param[i]
-                    #~ temp = cv2.imread("/home/dimitris/projectsPython/RoboMAE/robomae/test/" + str(frameCounter) + ".png")
-                    #~ rect = temp[y: y + h, x: x + w]
-                    #~ if(rect.size > 0):
-                        #~ cv2.imshow("rect" , rect)
             
 
                         
@@ -970,7 +964,6 @@ class VideoPlayer(QWidget):
                 videoCSV = fileName
                 self.videobox = [boundBox(count) for count in range(int(self.message_count))] 
                 box_buff, box_action = rosbagRGB.buffer_video_csv(fileName)
-                
                 if not (box_buff):
                     self.errorMessages(1)
                 else:
@@ -986,7 +979,7 @@ class VideoPlayer(QWidget):
                                 counter += 1
                         self.videobox[counter].addBox(self.time_buff[counter], key[1], key[2:], self.box_actionBuffer[idx])   
                         timestamp  = key[0]
-                            
+                              
                     gantChart.axes.clear()
                     gantChart.drawChart(self.videobox, framerate)
                     gantChart.draw()
@@ -1100,7 +1093,7 @@ class VideoPlayer(QWidget):
             csvFileName = bagFile.replace(".bag","_out.csv")
             with open(csvFileName, 'w') as file:
                 csv_writer = csv.writer(file, delimiter='\t')
-                headlines = ['Timestamp','Rect_id', 'Rect_x','Rect_y','Rect_W','Rect_H','Class','Meter_X','Meter_Y','Meter_Z','Top','Height' ,'Distance']
+                headlines = ['Timestamp','Rect_id', 'Rect_x','Rect_y','Rect_W','Rect_H','Class']
                 csv_writer.writerow(headlines)
                 for i in range(0, len(self.videobox)):
                     box = self.videobox[i]

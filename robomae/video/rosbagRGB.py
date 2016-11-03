@@ -67,7 +67,6 @@ Output:
 """
 def buffer_video_csv(csv_file):
     box_buff   = []
-    metrics = []
     box_buff_action = []
 
     if csv_file is not None and os.path.exists(csv_file):
@@ -75,17 +74,23 @@ def buffer_video_csv(csv_file):
             csv_reader = csv.reader(file_obj, delimiter = '\t')
             row_1 = next(csv_reader)
             try:
+		
 		for row in csv_reader:
+		    timestamp = float(row[0])
 		    if len(row) > 2:
-			timestamp = row[0]
 			(rec_id, x, y, width, height) = map(int, row[1:6])
 			box_buff.append((timestamp, rec_id, x, y, width, height))
 			if 'Class' in row_1:
 			    string = ast.literal_eval(row[6])
+			    print string
 			    box_buff_action.append(string)
 			else:
-			    box_buff_action.append("['Clear']")
-			metrics.append((0, 0, 0, 0, 0, 0))
+			    box_buff_action.append(["Clear"])
+			    
+		    else:
+			box_buff_action.append(["Clear"])
+			box_buff.append((timestamp, -1, 0, 0, 0, 0))
+		
 	    except:
                print("Error processing video csv")
     return box_buff, box_buff_action
