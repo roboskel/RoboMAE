@@ -352,6 +352,7 @@ class VideoWidget(QWidget):
         
         
         if len(player.videobox) > 0 and frameCounter < len(player.videobox):
+            print len(player.videobox[frameCounter].box_Param), frameCounter
             for i in range(len(player.videobox[frameCounter].box_id)):
                 if player.videobox[frameCounter].box_id[i] != -1:
                     x,y,w,h = player.videobox[frameCounter].box_Param[i]
@@ -976,22 +977,16 @@ class VideoPlayer(QWidget):
                     self.box_buffer = [list(elem) for elem in box_buff]
                     
                     #Frame counter initialize
-                    counter = -1
-                    if len(box_action) > 0:
-                        self.box_actionBuffer = [key for key in box_action]
-                        for idx, key in enumerate(self.box_buffer):
-                            if key[0] <= 0:
+                    timestamp = None
+                    counter = 0
+                    self.box_actionBuffer = [key for key in box_action]
+                    for idx, key in enumerate(self.box_buffer):
+                        if timestamp is not None:
+                            if timestamp != key[0]:
                                 counter += 1
-                                self.videobox[counter].addBox(self.time_buff[counter], key[0], key[1:], self.box_actionBuffer[idx])
-                            else:
-                                self.videobox[counter].addBox(self.time_buff[counter], key[0], key[1:], self.box_actionBuffer[idx])
-                    else:
-                        for idx, key in enumerate(self.box_buffer):
-                            if key[0] <= 0:
-                                counter += 1
-                                self.videobox[counter].addBox(self.time_buff[counter], key[0], key[1:], ['Clear'])
-                            else:
-                                self.videobox[counter].addBox(self.time_buff[counter], key[0], key[1:], ['Clear'])
+                        self.videobox[counter].addBox(self.time_buff[counter], key[1], key[2:], self.box_actionBuffer[idx])   
+                        timestamp  = key[0]
+                            
                     gantChart.axes.clear()
                     gantChart.drawChart(self.videobox, framerate)
                     gantChart.draw()
