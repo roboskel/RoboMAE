@@ -376,7 +376,6 @@ class VideoWidget(QWidget):
         
     #Mouse callback handling Boxes
     def mousePressEvent(self,event):
-        
         if QMouseEvent.button(event) == Qt.LeftButton and self.context_menu is False:
             QPoint.pos1 = QMouseEvent.pos(event)
 			#Check the mouse event is inside a box to initiate drag n drop
@@ -396,7 +395,18 @@ class VideoWidget(QWidget):
                 self.drag_start = (event.pos().x(), event.pos().y())
                 self.repaint()
             else:
-                rect = QRect(QPoint.pos1, QMouseEvent.pos(event))
+                if QPoint.pos1.x() < event.pos().x():
+                    x = QPoint.pos1.x()
+                else:
+                    x = event.pos().x()
+                if QPoint.pos1.y() < event.pos().y():
+                    y = QPoint.pos1.y()
+                else:
+                    y = event.pos().y()
+                w = abs(event.pos().x() - QPoint.pos1.x())
+                h = abs(event.pos().y() - QPoint.pos1.y())    
+                rect = QRect(x,y,w,h)
+                self.repaint()
                 self.repaint(rect)
             self.moved = True
         
@@ -407,7 +417,6 @@ class VideoWidget(QWidget):
                     x,y,w,h =  player.videobox[frameCounter].box_Param[self.index]
                     st_x, st_y = self.drag_start
                     player.videobox[frameCounter].box_Param[self.index] =  event.pos().x() - (st_x - x), event.pos().y() - (st_y - y), w, h
-                    self.repaint()
                 else:
                     if QPoint.pos1.x() < event.pos().x():
                         x = QPoint.pos1.x()
@@ -424,7 +433,7 @@ class VideoWidget(QWidget):
                     else:
                         timeId = player.time_buff[frameCounter]
                     player.videobox[frameCounter].addBox(timeId, None, [x,y,w,h], ['Clear'])
-                    self.repaint()
+                self.repaint()
         self.moved = False
         self.drag_start = None
         self.index = None
@@ -1265,6 +1274,9 @@ class MainWindow(QMainWindow):
         self.editMenu = self.menuBar().addMenu("&Edit")
         self.editMenu.addAction(self.deleteAct)
         
+        self.helpMenu = self.menuBar().addMenu("&Help")
+        self.helpMenu.addAction(self.shotcutAct)
+        
     def createActions(self):
         self.openBagAct = QAction("&Open rosbag", self, shortcut="Ctrl+B",
             statusTip="Open rosbag", triggered=self.openBag)
@@ -1274,9 +1286,10 @@ class MainWindow(QMainWindow):
             statusTip="Save csv", triggered=self.saveCSV)
         self.quitAct = QAction("&Quit", self, shortcut="Ctrl+Q",
             statusTip="Quit", triggered=self.closeEvent)
-            
         self.deleteAct = QAction("Delete All Boxes", self, shortcut=Qt.ALT + Qt.Key_R,
             statusTip="Delete All Boxes", triggered=self.deleteEvent)
+        self.shotcutAct = QAction("Shortcuts", self, statusTip="Shortcut information",
+            triggered=self.shortcuts)
         
     def openBag(self):
         player.openFile()
@@ -1323,9 +1336,18 @@ class MainWindow(QMainWindow):
             self.close()
    
     def deleteEvent(self, event):
-        player.videobox[frameCounter].removeAllBox()
-        player.videoWidget.repaint()
+        global bagFile
+        global videoCSV
+        if bagFile and videoCSV:
+            player.videobox[frameCounter].removeAllBox()
+            player.videoWidget.repaint()
     
+    def shortcuts(self):
+        QMessageBox.about(self, "Shortcut Help",
+                "Alt + A, Go back 1 frame\n"   + 
+                "Alt + D, Go forward 1 frame\n"+
+                "Alt + R, Delete all boxes")
+
 if __name__ == '__main__':
     os.system('cls' if os.name == 'nt' else 'clear')
     app = QApplication(sys.argv)
