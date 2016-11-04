@@ -41,14 +41,6 @@ from matplotlib.figure import Figure
 from matplotlib.collections import LineCollection
 from matplotlib.colors import ListedColormap, BoundaryNorm
 
-#QT imports
-from PyQt5 import QtCore, QtWidgets, QtGui
-from PyQt5.QtGui import QFont, QPainter
-from PyQt5.QtCore import Qt, QUrl, pyqtSignal, QFile, QIODevice, QObject, QRect
-from PyQt5.QtMultimedia import (QMediaContent,
-        QMediaMetaData, QMediaPlayer, QMediaPlaylist, QAudioOutput, QAudioFormat)
-from PyQt5.QtWidgets import (QApplication, QComboBox, QHBoxLayout, QPushButton,
-        QSizePolicy, QVBoxLayout, QWidget, QToolTip, QLabel, QFrame, QGridLayout, QMenu, qApp, QLineEdit)
 
 #Module imports
 from audio import rosbagAudio
@@ -232,6 +224,7 @@ class VideoWidget(QWidget):
         global frameCounter
         global framerate
         
+        self.addEventLabels = []
         self.stopEventEnabled = False
         self.addEventEnabled = False
         box_id = None
@@ -250,6 +243,8 @@ class VideoWidget(QWidget):
             stopEvent = menu.addMenu('Stop Event')
             deleteBox = menu.addAction('Delete Box')
             deleteAllBoxes = menu.addAction('Delete All Boxes')
+            
+            
             #Initiate add Event menu
             for label in highLabels:
                 self.addEventLabels.append(addEvent.addAction(label))
@@ -284,11 +279,8 @@ class VideoWidget(QWidget):
                         self.stopEventEnabled = True
 
                 if self.addEventEnabled:
-                    print action, self.addEventLabels
                     for i, key in enumerate(self.addEventLabels):
-                        print key
                         if action == key:
-                            print action, key
                             self.annotClass = highLabels[i]
                             self.annotEnabled = True
                             self.addEventEnabled = False
@@ -396,7 +388,7 @@ class VideoWidget(QWidget):
                     break
           
     def mouseMoveEvent(self, event):
-        if event.buttons() == QtCore.Qt.LeftButton:
+        if event.buttons() == Qt.LeftButton:
             if self.index is not None:
                 x,y,w,h =  player.videobox[frameCounter].box_Param[self.index]
                 st_x, st_y = self.drag_start
@@ -570,6 +562,7 @@ class VideoPlayer(QWidget):
         
         self.playButton = QPushButton()
         self.playButton.setEnabled(False)
+        self.playButton.setShortcut(QKeySequence(Qt.Key_Space))
         self.playButton.setIcon(self.style().standardIcon(QStyle.SP_MediaPlay))
         self.playButton.clicked.connect(self.play)
 
@@ -586,9 +579,12 @@ class VideoPlayer(QWidget):
         
         self.previousButton = QPushButton()
         self.previousButton.setIcon(self.style().standardIcon(QStyle.SP_MediaSeekBackward))
+        self.previousButton.setShortcut(QKeySequence(Qt.ALT + Qt.Key_A))
         self.previousButton.clicked.connect(self.previousFrame)
+        
         self.nextButton = QPushButton()
         self.nextButton.setIcon(self.style().standardIcon(QStyle.SP_MediaSeekForward))
+        self.nextButton.setShortcut(QKeySequence(Qt.ALT + Qt.Key_D))
         self.nextButton.clicked.connect(self.nextFrame)
         
         
@@ -903,7 +899,8 @@ class VideoPlayer(QWidget):
                             raise Exception(2)
                             
                     self.duration, framerate =  rosbagRGB.get_metadata(rgbFileName)
-                    
+                    self.videobox = [boundBox(count) for count in range(int(self.message_count))] 
+                     
                 except Exception as e:
 					print e
 					self.errorMessages(e[0])	
@@ -964,7 +961,7 @@ class VideoPlayer(QWidget):
             fileName,_ =  QFileDialog.getOpenFileName(self, "Open Csv ", os.path.dirname(os.path.abspath(bagFile)),"(*.csv)")
             if fileName:
                 videoCSV = fileName
-                self.videobox = [boundBox(count) for count in range(int(self.message_count))] 
+               
                 box_buff, box_action = rosbagRGB.buffer_video_csv(fileName)
                 if not (box_buff):
                     self.errorMessages(1)
@@ -1265,6 +1262,9 @@ class MainWindow(QMainWindow):
         self.fileMenu.addAction(self.saveCsvAct)
         self.fileMenu.addAction(self.quitAct)
         
+        self.editMenu = self.menuBar().addMenu("&Edit")
+        self.editMenu.addAction(self.deleteAct)
+        
     def createActions(self):
         self.openBagAct = QAction("&Open rosbag", self, shortcut="Ctrl+B",
             statusTip="Open rosbag", triggered=self.openBag)
@@ -1274,6 +1274,9 @@ class MainWindow(QMainWindow):
             statusTip="Save csv", triggered=self.saveCSV)
         self.quitAct = QAction("&Quit", self, shortcut="Ctrl+Q",
             statusTip="Quit", triggered=self.closeEvent)
+            
+        self.deleteAct = QAction("Delete All Boxes", self, shortcut=Qt.ALT + Qt.Key_R,
+            statusTip="Delete All Boxes", triggered=self.deleteEvent)
         
     def openBag(self):
         player.openFile()
@@ -1316,7 +1319,12 @@ class MainWindow(QMainWindow):
             retval = msgBox.exec_()
             if retval == 2 and type(event) != bool:
                 event.ignore()
+        else:
+            self.close()
    
+    def deleteEvent(self, event):
+        player.videobox[frameCounter].removeAllBox()
+        player.videoWidget.repaint()
     
 if __name__ == '__main__':
     os.system('cls' if os.name == 'nt' else 'clear')
