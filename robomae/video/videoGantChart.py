@@ -3,40 +3,18 @@
 
 import json
 import itertools
+from video.videoGlobals import videoGlobals
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from PyQt5.QtWidgets import QSizePolicy
 
-global annotationColors
-global eventColors
-global classLabels
-global highLabels
-
-annotationColors = ['#00FF00', '#FF00FF','#FFFF00','#00FFFF','#FFA500','#C0C0C0','#000000','#EAEAEA']
-eventColors = ['#9fbf1f','#087649','#0a5b75','#181a8d','#7969b0','#76a9ea','#bef36e','#edfa84','#f18ed2','#753e20']
-
-def parseJson():
-    json_basicLabel = []
-    json_highLabel = []
-
-    with open("labels.json") as json_file:
-            json_data = json.load(json_file)
-            json_label = []
-            for i in json_data['basiclabels'] :
-                json_basicLabel.append(i)
-            for j in json_data['highlevellabels']:
-                json_highLabel.append(j)
-    return json_basicLabel,json_highLabel
 
 class videoGantChart(FigureCanvas):
+    
     def __init__(self, parent=None,width=15,height=1,dpi=100):
-        global classLabels
-        global highLabels
         gantChart = Figure(figsize=(width, height), dpi=dpi)
         self.axes = gantChart.add_subplot(111)
-
-        self.drawChart([], None)
-        classLabels, highLabels = parseJson()
+        self.drawChart([], 0, None)
         
         FigureCanvas.__init__(self, gantChart)
         self.setParent(parent)
@@ -49,10 +27,9 @@ class videoGantChart(FigureCanvas):
 
 #Class for the gantChart
 class gantShow(videoGantChart):
+    
     #Plot the chart
-    def drawChart(self, videobox, framerate):
-        global classLabels
-        global highLabels
+    def drawChart(self, videobox, frameCounter, framerate):
         temp_action = []
         self.timeWithId = []
         self.tickY = []
@@ -60,7 +37,8 @@ class gantShow(videoGantChart):
         self.boxAtYaxes = []
         self.axes.hlines(0,0,0)
 
-        for frame_index in videobox:
+        for i in range(0, len(videobox)):
+            frame_index = videobox[i]
             for i in range(len(frame_index.box_id)):
                 boxIdx = frame_index.box_id[i]
                 if boxIdx != -1:
@@ -112,13 +90,11 @@ class gantShow(videoGantChart):
 
     #Calculates the color for the gantChart and bound Boxes
     def getColor(self, label):
-        global classLabels
-        global highLabels
         if label == 'Clear':
                 #color = 'Clear'
             return '#0000FF'
-        elif label in classLabels:
+        elif label in videoGlobals.classLabels:
                 #color = label
-            return annotationColors[classLabels.index(label) % len(classLabels)]
-        elif label in highLabels:
-            return eventColors[highLabels.index(label) % len(highLabels)]
+            return videoGlobals.annotationColors[videoGlobals.classLabels.index(label) % len(videoGlobals.classLabels)]
+        elif label in videoGlobals.highLabels:
+            return videoGlobals.eventColors[videoGlobals.highLabels.index(label) % len(videoGlobals.highLabels)]

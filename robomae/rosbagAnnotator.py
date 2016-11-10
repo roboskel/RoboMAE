@@ -54,6 +54,7 @@ from video import rosbagDepth
 from video import rosbagRGB
 from video import rosbagVideo
 from video import videoGantChart
+from video.videoGlobals import videoGlobals
 
 from laser import laserGlobals
 from laser import rosbagLaser
@@ -67,22 +68,14 @@ global csvFile
 global videoCSV
 global frameCounter
 global boxInitialized
-global annotationColors
-global eventColors
 global xBoxCoord
 global BasicTopics
-global classLabels
-global highLabels
 
 bagFile = None
 videoCSV = None
 frameCounter = 0
 boxInitialized = False
-annotationColors = ['#00FF00', '#FF00FF','#FFFF00','#00FFFF','#FFA500','#C0C0C0','#000000','#EAEAEA']
-eventColors = ['#9fbf1f','#087649','#0a5b75','#181a8d','#7969b0','#76a9ea','#bef36e','#edfa84','#f18ed2','#753e20']
 xBoxCoord = []
-classLabels = []
-highLabels = []
 #Declare the basic topics for the topic box
 
 
@@ -188,8 +181,6 @@ class VideoWidgetSurface(QAbstractVideoSurface):
 class VideoWidget(QWidget):
 
     def __init__(self, parent=None):
-        global classLabels
-        global highLabels
         super(VideoWidget, self).__init__(parent)
         self.setAutoFillBackground(False)
         self.setAttribute(Qt.WA_NoSystemBackground, True)
@@ -218,9 +209,7 @@ class VideoWidget(QWidget):
 
     #Shows the right click menu
     def contextMenuEvent(self, event):
-        global classLabels
         global gantChart
-        global highLabels
         global frameCounter
         global framerate
         
@@ -235,7 +224,7 @@ class VideoWidget(QWidget):
             
             menu = QMenu(self)
 
-            for i in classLabels:
+            for i in videoGlobals.classLabels:
                 self.buttonLabels.append(menu.addAction(i))
             
             menu.addSeparator()
@@ -246,7 +235,7 @@ class VideoWidget(QWidget):
             
             
             #Initiate add Event menu
-            for label in highLabels:
+            for label in videoGlobals.highLabels:
                 self.addEventLabels.append(addEvent.addAction(label))
             changeId = menu.addAction('Change Id')
             
@@ -265,7 +254,7 @@ class VideoWidget(QWidget):
                 #Show only annotated high classes of the box
                 if len(player.videobox[frameCounter].annotation) > 0:
                     for annot in player.videobox[frameCounter].annotation[index]:
-                        if annot in highLabels and annot not in self.checkStopEventMenu:
+                        if annot in videoGlobals.highLabels and annot not in self.checkStopEventMenu:
                             self.checkStopEventMenu.append(annot)
                             self.stopEventLabels.append(stopEvent.addAction(annot))
                             stopEvent.setEnabled(True)
@@ -281,7 +270,7 @@ class VideoWidget(QWidget):
                 if self.addEventEnabled:
                     for i, key in enumerate(self.addEventLabels):
                         if action == key:
-                            self.annotClass = highLabels[i]
+                            self.annotClass = videoGlobals.highLabels[i]
                             self.annotEnabled = True
                             self.addEventEnabled = False
 
@@ -293,7 +282,7 @@ class VideoWidget(QWidget):
 
                 for i,key in enumerate(self.buttonLabels):
                     if action == key:
-                        self.annotClass = classLabels[i]
+                        self.annotClass = videoGlobals.classLabels[i]
                         self.annotEnabled = True
                 if action == deleteBox:
                     player.videobox[frameCounter].removeSpecBox(index)
@@ -301,12 +290,11 @@ class VideoWidget(QWidget):
                     player.videobox[frameCounter].removeAllBox()
                 elif action == changeId:
                     #Call the textbox
-                    self.newBoxId = rosbagGui.textBox(player.videobox, index, frameCounter, gantChart, framerate)
-                    self.newBoxId.setGeometry(QRect(500, 100, 300, 100))
+                    self.newBoxId = rosbagGui.textBox(player.videobox, index, frameCounter, framerate, gantChart)
+                    self.newBoxId.setGeometry(QRect(500, 100, 250, 100))
                     self.newBoxId.show()
                 
                 if self.annotEnabled:
-                    print self.annotClass
                     for counter in range(frameCounter, len(player.videobox)):
                         if box_id in player.videobox[counter].box_id:
                             player.videobox[counter].changeClass(box_id, str(self.annotClass))
@@ -315,7 +303,7 @@ class VideoWidget(QWidget):
                         
                 self.repaint()
                 gantChart.axes.clear()
-                gantChart.drawChart(player.videobox, framerate)
+                gantChart.drawChart(player.videobox, frameCounter, framerate)
                 gantChart.draw()
             
             self.buttonLabels = []
@@ -443,28 +431,27 @@ class VideoWidget(QWidget):
         self.surface.updateVideoRect()
 
     def getColorBox(self,action):
-        global classLabels
-        global highLabels
+        
         for label in action:
-            if label in classLabels:
+            if label in videoGlobals.classLabels:
                 color = label
-                return annotationColors[classLabels.index(label) % len(annotationColors)]
+                return videoGlobals.annotationColors[videoGlobals.classLabels.index(label) % len(videoGlobals.annotationColors)]
             elif label == 'Clear':
                 color = 'Clear'
                 return '#0000FF'
-            elif label in highLabels:
+            elif label in videoGlobals.highLabels:
                 pass
 
-        if action in classLabels:
-            for index,key in enumerate(classLabels):
+        if action in videoGlobals.classLabels:
+            for index,key in enumerate(videoGlobals.classLabels):
                 if action == key:
-                    return annotationColors[index % len(annotationColors)]
+                    return videoGlobals.annotationColors[index % len(videoGlobals.annotationColors)]
                 elif action == 'Clear':
                     return '#0000FF'
         else:
             for index,key in enumerate(player.videobox[frameCounter].annotation):
-                if key in classLabels:
-                    return annotationColors[classLabels.index(key) % len(annotationColors)]
+                if key in videoGlobals.classLabels:
+                    return videoGlobals.annotationColors[classLabels.index(key) % len(videoGlobals.annotationColors)]
                 elif key == 'Clear':
                     return '#0000FF'
 
@@ -474,13 +461,12 @@ class VideoPlayer(QWidget):
     def __init__(self, parent=None):
         global gantChart
         global Topics
-        global classLabels
-        global highLabels
+        
         super(VideoPlayer, self).__init__(parent)
         self.mediaPlayer = QMediaPlayer(None, QMediaPlayer.VideoSurface)
         
         #Parse json file
-        classLabels, highLabels = self.parseJson()
+        videoGlobals.classLabels, videoGlobals.highLabels, videoGlobals.annotationColors, videoGlobals.eventColors = self.parseJson()
         
         Topics              = None
         self.time_          = 0
@@ -845,8 +831,6 @@ class VideoPlayer(QWidget):
         global depthFileName
         global rgbFileName
         global Topics
-        global classLabels
-        global highLabels
         start_time = None
                
         fileName, _ = QFileDialog.getOpenFileName(self, "Open Bag", QDir.currentPath(),"(*.bag)")
@@ -889,7 +873,7 @@ class VideoPlayer(QWidget):
                     
                         
                     if os.path.isfile(rgbFileName):
-                        print colored('Loaded RGB video', 'yellow')
+                        print(colored('Loaded RGB video', 'yellow'))
                     
                         # just fill time buffer in case that video exists
                         for topic, msg, t in bag.read_messages(topics=[self.topic_window.temp_topics[2][1]]):
@@ -898,7 +882,7 @@ class VideoPlayer(QWidget):
                             self.time_buff.append(t.to_sec() - start_time.to_sec())
                     else:
                         #Get bag video metadata
-                        print colored('Getting rgb data from ROS', 'green')
+                        print(colored('Getting rgb data from ROS', 'green'))
                         (image_buffer, self.time_buff) = rosbagRGB.buffer_rgb_data(bag, self.topic_window.temp_topics[2][1], compressed)
                         if not image_buffer:
                             raise Exception(8)
@@ -911,8 +895,8 @@ class VideoPlayer(QWidget):
                     self.videobox = [boundBox(count) for count in range(int(self.message_count))] 
                      
                 except Exception as e:
-					print e
-					self.errorMessages(e[0])	
+                    print(e)
+                    self.errorMessages(e[0])	
 			#Laser Topic selection
             if self.topic_window.temp_topics[3][1] != 'Choose Topic':
                 try:
@@ -947,7 +931,7 @@ class VideoPlayer(QWidget):
             self.wave.drawAnnotations()
             self.wave.draw()
 
-            self.chart.drawChart(self.videobox, framerate)
+            self.chart.drawChart(self.videobox, frameCounter, framerate)
             self.chart.draw()
 
             self.setWindowTitle(fileName + ' -> Annotation')
@@ -989,7 +973,7 @@ class VideoPlayer(QWidget):
                         timestamp  = key[0]
                               
                     gantChart.axes.clear()
-                    gantChart.drawChart(self.videobox, framerate)
+                    gantChart.drawChart(self.videobox, frameCounter, framerate)
                     gantChart.draw()
         else:
             self.errorMessages(10)
@@ -1120,7 +1104,7 @@ class VideoPlayer(QWidget):
                     else:
                         csv_writer.writerow([self.time_buff[i]])
                     
-                print "Csv written at: ", csvFileName      
+                print ("Csv written at: ", csvFileName)   
    
     def closeEvent(self, event):
         self.writeCSV()
@@ -1128,15 +1112,22 @@ class VideoPlayer(QWidget):
     def parseJson(self):
         json_basicLabel = []
         json_highLabel = []
-        
+        json_annotationColors = []
+        json_eventColors = []
+
         with open("labels.json") as json_file:
                 json_data = json.load(json_file)
                 json_label = []
                 for i in json_data['basiclabels'] :
                     json_basicLabel.append(i)
-                for j in json_data['highlevellabels']:
-                    json_highLabel.append(j)
-        return json_basicLabel,json_highLabel
+                for i in json_data['highlevellabels']:
+                    json_highLabel.append(i)
+                for i in json_data['annotationColors'] :
+                    json_annotationColors.append(i)
+                for i in json_data['eventColors']:
+                    json_eventColors.append(i)
+        return json_basicLabel,json_highLabel, json_annotationColors, json_eventColors
+
     
 
 #Holds the bound box parameters
@@ -1183,12 +1174,10 @@ class boundBox(object):
         
     #Handles the annotation for basic and high level classes
     def changeClass(self, boxid, classify):
-        global classLabels
-        global highLabels
         if boxid in self.box_id:
-            if classify in classLabels:
+            if classify in videoGlobals.classLabels:
                 self.annotation[self.box_id.index(boxid)][0] = classify
-            elif classify in highLabels:
+            elif classify in videoGlobals.highLabels:
                 if classify not in self.annotation[boxid]:
                     self.annotation[boxid].append(classify)
 
@@ -1257,9 +1246,6 @@ class boundBox(object):
 
 
 class MainWindow(QMainWindow):
-    global csvFile
-    global classLabels
-    global highLabels
     
     def __init__(self, player):
         super(MainWindow, self).__init__()
@@ -1272,6 +1258,7 @@ class MainWindow(QMainWindow):
         self.fileMenu.addAction(self.quitAct)
         
         self.editMenu = self.menuBar().addMenu("&Edit")
+        self.editMenu.addAction(self.addEventAct)
         self.editMenu.addAction(self.deleteAct)
         
         self.helpMenu = self.menuBar().addMenu("&Help")
@@ -1286,6 +1273,8 @@ class MainWindow(QMainWindow):
             statusTip="Save csv", triggered=self.saveCSV)
         self.quitAct = QAction("&Quit", self, shortcut="Ctrl+Q",
             statusTip="Quit", triggered=self.closeEvent)
+        self.addEventAct = QAction("Add event", self,
+            statusTip="Add event", triggered=self.add_event)
         self.deleteAct = QAction("Delete All Boxes", self, shortcut=Qt.ALT + Qt.Key_R,
             statusTip="Delete All Boxes", triggered=self.deleteEvent)
         self.shotcutAct = QAction("Shortcuts", self, statusTip="Shortcut information",
@@ -1347,6 +1336,13 @@ class MainWindow(QMainWindow):
                 "Alt + A, Go back 1 frame\n"   + 
                 "Alt + D, Go forward 1 frame\n"+
                 "Alt + R, Delete all boxes")
+                
+    def add_event(self):
+        self.a = rosbagGui.classBox()
+        self.a.setGeometry(QRect(500, 100, 250, 100))
+        ret = self.a.show()     
+        
+                
 
 if __name__ == '__main__':
     os.system('cls' if os.name == 'nt' else 'clear')

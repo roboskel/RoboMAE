@@ -1,48 +1,62 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import json
+
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 from PyQt5.QtMultimedia import *
 from PyQt5.QtMultimediaWidgets import *
+from video.videoGlobals import videoGlobals
 
 #Class for box id change
 class textBox(QWidget):
 
-    def __init__(self, videobox, index, frameCounter, gantChart, framerate):
+    def __init__(self, videobox, index, frameCounter, framerate, gantChart):
 
         QWidget.__init__(self)
-        self.videobox = videobox
         self.box_Idx = None
+        self.videobox = videobox
         self.index = index
         self.frameCounter = frameCounter
         self.framerate = framerate
         self.gantChart = gantChart
+        
+        self.cancel = QPushButton("Cancel", self)
+        self.cancel.clicked.connect(self.closeTextBox)
         self.Ok = QPushButton("Ok", self)
-        self.Ok.clicked.connect(self.closeTextBox)
-        self.Ok.move(115, 60)
-        #~ self.Ok.show()
+        self.Ok.clicked.connect(self.pressedOk)
         
         self.boxId = QLineEdit(self)
         self.boxId.textChanged.connect(self.boxChanged)
         self.boxId.setPlaceholderText('Box Id:')
-        self.boxId.setMinimumWidth(100)
+        self.boxId.setMinimumWidth(80)
         self.boxId.setEnabled(True)
         self.boxId.move(90, 15)
-        #~ self.boxId.show()
 
         flo = QFormLayout()
         flo.addRow(self.boxId)
-        flo.addRow(self.Ok)
-        self.setLayout(flo)
+        
+        boxLayout = QHBoxLayout()
+        boxLayout.addWidget(self.cancel)
+        boxLayout.addWidget(self.Ok)
+        
+        verLayout = QVBoxLayout()
+        verLayout.addLayout(flo)
+        verLayout.addLayout(boxLayout)
+        
+        self.setLayout(verLayout)
         self.setWindowTitle('Set Box id')
         self.show()
        
     def boxChanged(self,text):
         self.box_Idx = text
+        
+    def closeTextBox(self,text):
+        self.close()
 
-    def closeTextBox(self):
+    def pressedOk(self):
         try:
             self.box_Idx = int(self.box_Idx)
             #Check id
@@ -59,7 +73,7 @@ class textBox(QWidget):
                         self.videobox[self.frameCounter].box_id[self.index] = self.box_Idx
                     self.frameCounter += 1
                 self.gantChart.axes.clear()
-                self.gantChart.drawChart(self.videobox, self.framerate)
+                self.gantChart.drawChart(self.videobox, self.frameCounter, self.framerate)
                 self.gantChart.draw()
                 self.Ok.clicked.disconnect()
                 self.close()
@@ -72,8 +86,6 @@ class textBox(QWidget):
             self.close()
 
         
-
-
 #Class for Drop down boxes about topic selection
 class TopicBox(QDialog):
     def __init__(self):
@@ -150,3 +162,89 @@ class TopicBox(QDialog):
         self.okButtonPush = True
         self.close()
 
+
+#Class for class addition
+class classBox(QWidget):
+
+    def __init__(self):
+
+        QWidget.__init__(self)
+        self.label = None
+        self.cancel = QPushButton("Cancel", self)
+        self.cancel.clicked.connect(self.closeBox)
+        self.Ok = QPushButton("Ok", self)
+        self.Ok.clicked.connect(self.okPressed)
+        
+        self.boxId = QLineEdit(self)
+        self.boxId.textChanged.connect(self.boxChanged)
+        self.boxId.setPlaceholderText('Class Label:')
+        self.boxId.setMinimumWidth(80)
+        self.boxId.setEnabled(True)
+        self.boxId.move(90, 15)
+
+        flo = QFormLayout()
+        flo.addRow(self.boxId)
+        boxLayout = QHBoxLayout()
+        boxLayout.addWidget(self.cancel)
+        boxLayout.addWidget(self.Ok)
+        
+        verLayout = QVBoxLayout()
+        verLayout.addLayout(flo)
+        verLayout.addLayout(boxLayout)
+        
+        self.setLayout(verLayout)
+        self.setWindowTitle('Set Class Label')
+        self.show()
+       
+    def boxChanged(self, text):
+        self.label = text
+        
+    def closeBox(self):
+        self.close()
+
+    def okPressed(self):
+        self.label = self.label
+        #Check id
+        if self.label in videoGlobals.classLabels or self.label in videoGlobals.highLabels:
+            #Box Id already given
+            msgBox = QMessageBox()
+            msgBox.setText("Class label already exists")
+            msgBox.setIcon(msgBox.Warning)
+            msgBox.setWindowTitle("Error")
+            msgBox.exec_()
+        else:
+           videoGlobals.classLabels.append(self.label)
+           self.Ok.clicked.disconnect()
+           self.close()
+           color = QColorDialog.getColor()
+           json_data = None
+           with open("labels.json", 'r+') as json_file:
+               json_data = json.load(json_file)
+               json_data['basiclabels'].append(self.label)
+               json_data['annotationColors'].append(color.name())
+           with open("labels.json", 'w+') as json_file:    
+               json.dump(json_data, json_file)
+        
+        videoGlobals.classLabels, videoGlobals.highLabels, videoGlobals.annotationColors, videoGlobals.eventColors = self.parseJson()
+        
+    def parseJson(self):
+        json_basicLabel = []
+        json_highLabel = []
+        json_annotationColors = []
+        json_eventColors = []
+
+        with open("labels.json") as json_file:
+                json_data = json.load(json_file)
+                json_label = []
+                for i in json_data['basiclabels'] :
+                    json_basicLabel.append(i)
+                for i in json_data['highlevellabels']:
+                    json_highLabel.append(i)
+                for i in json_data['annotationColors'] :
+                    json_annotationColors.append(i)
+                for i in json_data['eventColors']:
+                    json_eventColors.append(i)
+        return json_basicLabel,json_highLabel, json_annotationColors, json_eventColors
+
+
+    
