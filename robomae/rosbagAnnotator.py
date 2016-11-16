@@ -1259,6 +1259,7 @@ class MainWindow(QMainWindow):
         
         self.editMenu = self.menuBar().addMenu("&Edit")
         self.editMenu.addAction(self.addEventAct)
+        self.editMenu.addAction(self.removeEventAct)
         self.editMenu.addAction(self.deleteAct)
         
         self.helpMenu = self.menuBar().addMenu("&Help")
@@ -1273,10 +1274,14 @@ class MainWindow(QMainWindow):
             statusTip="Save csv", triggered=self.saveCSV)
         self.quitAct = QAction("&Quit", self, shortcut="Ctrl+Q",
             statusTip="Quit", triggered=self.closeEvent)
+            
         self.addEventAct = QAction("Add event", self,
             statusTip="Add event", triggered=self.add_event)
+        self.removeEventAct = QAction("Remove event", self,
+            statusTip="Remove event", triggered=self.remove_event)
         self.deleteAct = QAction("Delete All Boxes", self, shortcut=Qt.ALT + Qt.Key_R,
             statusTip="Delete All Boxes", triggered=self.deleteEvent)
+            
         self.shotcutAct = QAction("Shortcuts", self, statusTip="Shortcut information",
             triggered=self.shortcuts)
         
@@ -1338,9 +1343,13 @@ class MainWindow(QMainWindow):
                 "Alt + R, Delete all boxes")
                 
     def add_event(self):
-        self.a = rosbagGui.classBox()
-        self.a.setGeometry(QRect(500, 100, 250, 100))
-        ret = self.a.show()     
+        self.addEvent = rosbagGui.addLabel()
+        self.addEvent.setGeometry(QRect(500, 100, 250, 100))
+        self.addEvent.show()     
+        
+    def remove_event(self):
+        self.removeEvent = rosbagGui.removeLabel()
+        self.removeEvent.show()     
         
                 
 
