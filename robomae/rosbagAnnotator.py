@@ -43,6 +43,11 @@ from matplotlib.colors import ListedColormap, BoundaryNorm
 
 
 #Module imports
+from gui import topicBox
+from gui import changeBoxId
+from gui import editLabels
+from gui import videoShortcuts
+
 from audio import rosbagAudio
 from audio import visualizeAudio as vA
 from audio import ganttChartAudio as gA
@@ -61,7 +66,6 @@ from laser import rosbagLaser
 from laser import graphicalInterfaceLaser as gL
 ''''''''''''''''''''''''''''''''''''
 
-from gui import rosbagGui
 
 global bagFile
 global csvFile
@@ -290,7 +294,7 @@ class VideoWidget(QWidget):
                     player.videobox[frameCounter].removeAllBox()
                 elif action == changeId:
                     #Call the textbox
-                    self.newBoxId = rosbagGui.textBox(player.videobox, index, frameCounter, framerate, gantChart)
+                    self.newBoxId = changeBoxId.changeBoxId(player.videobox, index, frameCounter, framerate, gantChart)
                     self.newBoxId.setGeometry(QRect(500, 100, 250, 100))
                     self.newBoxId.show()
                 
@@ -478,7 +482,7 @@ class VideoPlayer(QWidget):
         self.metric_buffer  = []
         self.time_buff      = []
 
-        self.topic_window = rosbagGui.TopicBox()
+        self.topic_window = topicBox.TopicBox()
         
         # >> DEFINE WIDGETS OCJECTS
         # >> VIDEO - DEPTH - AUDIO - LASER - GANTT CHART
@@ -1257,13 +1261,11 @@ class MainWindow(QMainWindow):
         self.fileMenu.addAction(self.saveCsvAct)
         self.fileMenu.addAction(self.quitAct)
         
-        self.editMenu = self.menuBar().addMenu("&Edit")
-        self.editMenu.addAction(self.addEventAct)
-        self.editMenu.addAction(self.removeEventAct)
+        self.editMenu = self.menuBar().addMenu("&Video")
+        self.editMenu.addAction(self.editLabelsAct)
         self.editMenu.addAction(self.deleteAct)
+        self.editMenu.addAction(self.shotcutAct)
         
-        self.helpMenu = self.menuBar().addMenu("&Help")
-        self.helpMenu.addAction(self.shotcutAct)
         
     def createActions(self):
         self.openBagAct = QAction("&Open rosbag", self, shortcut="Ctrl+B",
@@ -1275,10 +1277,8 @@ class MainWindow(QMainWindow):
         self.quitAct = QAction("&Quit", self, shortcut="Ctrl+Q",
             statusTip="Quit", triggered=self.closeEvent)
             
-        self.addEventAct = QAction("Add event", self,
-            statusTip="Add event", triggered=self.add_event)
-        self.removeEventAct = QAction("Remove event", self,
-            statusTip="Remove event", triggered=self.remove_event)
+        self.editLabelsAct = QAction("Edit Labels", self,
+            statusTip="Edit Labels", triggered=self.edit_labels)
         self.deleteAct = QAction("Delete All Boxes", self, shortcut=Qt.ALT + Qt.Key_R,
             statusTip="Delete All Boxes", triggered=self.deleteEvent)
             
@@ -1337,19 +1337,12 @@ class MainWindow(QMainWindow):
             player.videoWidget.repaint()
     
     def shortcuts(self):
-        QMessageBox.about(self, "Shortcut Help",
-                "Alt + A, Go back 1 frame\n"   + 
-                "Alt + D, Go forward 1 frame\n"+
-                "Alt + R, Delete all boxes")
-                
-    def add_event(self):
-        self.addEvent = rosbagGui.addLabel()
-        self.addEvent.setGeometry(QRect(500, 100, 250, 100))
-        self.addEvent.show()     
+        self.shortcuts = videoShortcuts.videoShortCuts()
+        self.shortcuts.show()
         
-    def remove_event(self):
-        self.removeEvent = rosbagGui.removeLabel()
-        self.removeEvent.show()     
+    def edit_labels(self):
+        self.editLabels = editLabels.editLabels()
+        self.editLabels.show()     
         
                 
 
