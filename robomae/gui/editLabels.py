@@ -3,6 +3,7 @@
 
 import json
 from gui import picklist
+from gui import addLabels
 
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
@@ -11,6 +12,75 @@ from PyQt5.QtMultimedia import *
 from PyQt5.QtMultimediaWidgets import *
 from video.videoGlobals import videoGlobals
 
+
+#Class for class addition
+class addLabel(QWidget, addLabels.Ui_Dialog):
+
+    def __init__(self, editLabel, isHighLevel, parent=None):
+        super(addLabel, self).__init__(parent)
+        self.setupUi(self)
+        
+        self.label = None
+        self.editLabel = editLabel
+        self.isHighLevel = isHighLevel
+        
+        self.lineEdit.textChanged.connect(self.boxChanged)
+        self.lineEdit.setPlaceholderText('Class Label:')
+        
+       
+    def boxChanged(self, text):
+        self.label = text
+        
+    def reject(self):
+        self.close()
+
+    def accept(self):
+        self.label = self.label
+        if self.label in videoGlobals.classLabels or self.label in videoGlobals.highLabels:
+            msgBox = QMessageBox()
+            msgBox.setText("Class label already exists")
+            msgBox.setIcon(msgBox.Warning)
+            msgBox.setWindowTitle("Error")
+            msgBox.exec_()
+        else:
+           videoGlobals.classLabels.append(self.label)
+           self.close()
+           color = QColorDialog.getColor()
+           json_data = None
+           with open("labels.json", 'r+') as json_file:
+               json_data = json.load(json_file)
+               if self.isHighLevel:
+                    json_data['highlevellabels'].append(self.label)
+                    json_data['eventColors'].append(color.name())
+               else:
+                    json_data['basiclabels'].append(self.label)
+                    json_data['annotationColors'].append(color.name())
+           with open("labels.json", 'w+') as json_file:    
+               json.dump(json_data, json_file)
+        
+        videoGlobals.classLabels, videoGlobals.highLabels, videoGlobals.annotationColors, videoGlobals.eventColors = self.parseJson()
+        self.editLabel.refreshLists()
+        
+    def parseJson(self):
+        json_basicLabel = []
+        json_highLabel = []
+        json_annotationColors = []
+        json_eventColors = []
+
+        with open("labels.json") as json_file:
+                json_data = json.load(json_file)
+                json_label = []
+                for i in json_data['basiclabels'] :
+                    json_basicLabel.append(i)
+                for i in json_data['highlevellabels']:
+                    json_highLabel.append(i)
+                for i in json_data['annotationColors'] :
+                    json_annotationColors.append(i)
+                for i in json_data['eventColors']:
+                    json_eventColors.append(i)
+        return json_basicLabel,json_highLabel, json_annotationColors, json_eventColors
+
+    
 class editLabels(QWidget, picklist.Ui_Form):
     
     def __init__(self, parent=None):
@@ -107,95 +177,3 @@ class editLabels(QWidget, picklist.Ui_Form):
                     json_eventColors.append(i)
         return json_basicLabel,json_highLabel, json_annotationColors, json_eventColors
         
-
-#Class for class addition
-class addLabel(QWidget):
-
-    def __init__(self, editLabel, isHighLevel):
-
-        QWidget.__init__(self)
-        self.label = None
-        self.editLabel = editLabel
-        self.isHighLevel = isHighLevel
-        self.cancel = QPushButton("Cancel", self)
-        self.cancel.clicked.connect(self.closeBox)
-        self.Ok = QPushButton("Ok", self)
-        self.Ok.clicked.connect(self.okPressed)
-        
-        self.boxId = QLineEdit(self)
-        self.boxId.textChanged.connect(self.boxChanged)
-        self.boxId.setPlaceholderText('Class Label:')
-        self.boxId.setMinimumWidth(80)
-        self.boxId.setEnabled(True)
-        self.boxId.move(90, 15)
-
-        flo = QFormLayout()
-        flo.addRow(self.boxId)
-        boxLayout = QHBoxLayout()
-        boxLayout.addWidget(self.cancel)
-        boxLayout.addWidget(self.Ok)
-        
-        verLayout = QVBoxLayout()
-        verLayout.addLayout(flo)
-        verLayout.addLayout(boxLayout)
-        
-        self.setLayout(verLayout)
-        self.setWindowTitle('Add Label')
-        self.show()
-       
-    def boxChanged(self, text):
-        self.label = text
-        
-    def closeBox(self):
-        self.close()
-
-    def okPressed(self):
-        self.label = self.label
-        #Check id
-        if self.label in videoGlobals.classLabels or self.label in videoGlobals.highLabels:
-            #Box Id already given
-            msgBox = QMessageBox()
-            msgBox.setText("Class label already exists")
-            msgBox.setIcon(msgBox.Warning)
-            msgBox.setWindowTitle("Error")
-            msgBox.exec_()
-        else:
-           videoGlobals.classLabels.append(self.label)
-           self.Ok.clicked.disconnect()
-           self.close()
-           color = QColorDialog.getColor()
-           json_data = None
-           with open("labels.json", 'r+') as json_file:
-               json_data = json.load(json_file)
-               if self.isHighLevel:
-                    json_data['highlevellabels'].append(self.label)
-                    json_data['eventColors'].append(color.name())
-               else:
-                    json_data['basiclabels'].append(self.label)
-                    json_data['annotationColors'].append(color.name())
-           with open("labels.json", 'w+') as json_file:    
-               json.dump(json_data, json_file)
-        
-        videoGlobals.classLabels, videoGlobals.highLabels, videoGlobals.annotationColors, videoGlobals.eventColors = self.parseJson()
-        self.editLabel.refreshLists()
-        
-    def parseJson(self):
-        json_basicLabel = []
-        json_highLabel = []
-        json_annotationColors = []
-        json_eventColors = []
-
-        with open("labels.json") as json_file:
-                json_data = json.load(json_file)
-                json_label = []
-                for i in json_data['basiclabels'] :
-                    json_basicLabel.append(i)
-                for i in json_data['highlevellabels']:
-                    json_highLabel.append(i)
-                for i in json_data['annotationColors'] :
-                    json_annotationColors.append(i)
-                for i in json_data['eventColors']:
-                    json_eventColors.append(i)
-        return json_basicLabel,json_highLabel, json_annotationColors, json_eventColors
-
-    
