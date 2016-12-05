@@ -486,7 +486,11 @@ class VideoPlayer(QWidget):
         self.box_buffer     = []
         self.metric_buffer  = []
         self.time_buff      = []
-
+        
+        #Audio variables
+        self.player = QMediaPlayer()
+        self.playlist = QMediaPlaylist(self)
+        
         self.topic_window = topicBox.TopicBox()
         
         # >> DEFINE WIDGETS OCJECTS
@@ -681,22 +685,18 @@ class VideoPlayer(QWidget):
         return waveLayout
         
     def createAudioButtons(self):
-        playButtonAudio = QPushButton("Play")
-        pauseButtonAudio = QPushButton("Pause")
-        stopButtonAudio = QPushButton("Stop")
+        self.playButtonAudio = QPushButton()
+        self.stopButtonAudio = QPushButton()
 
-        playButtonAudio.clicked.connect(self.audioPlay)
-        pauseButtonAudio.clicked.connect(self.audioPause)
-        stopButtonAudio.clicked.connect(self.audioStop)
+        self.playButtonAudio.clicked.connect(self.audioPlay)
+        self.stopButtonAudio.clicked.connect(self.audioStop)
         
-        playButtonAudio.setIcon(self.style().standardIcon(QStyle.SP_MediaPlay))
-        pauseButtonAudio.setIcon(self.style().standardIcon(QStyle.SP_MediaPause))
-        stopButtonAudio.setIcon(self.style().standardIcon(QStyle.SP_MediaStop))
+        self.playButtonAudio.setIcon(self.style().standardIcon(QStyle.SP_MediaPlay))
+        self.stopButtonAudio.setIcon(self.style().standardIcon(QStyle.SP_MediaStop))
         
         buttonLayoutAudio = QHBoxLayout()
-        buttonLayoutAudio.addWidget(playButtonAudio)
-        buttonLayoutAudio.addWidget(pauseButtonAudio)
-        buttonLayoutAudio.addWidget(stopButtonAudio)
+        buttonLayoutAudio.addWidget(self.playButtonAudio)
+        buttonLayoutAudio.addWidget(self.stopButtonAudio)
         buttonLayoutAudio.setAlignment(Qt.AlignLeft)
         
         return buttonLayoutAudio
@@ -728,16 +728,19 @@ class VideoPlayer(QWidget):
                 self.start = audioGlobals.startTimeToPlay
                 self.end = audioGlobals.endTimeToPlay
             self.player.setPosition(self.start)
-
-        playFlag = True
-        self.player.play()
-
-    #Pause audio playing
-    def audioPause(self):
-        #Not begging from self.start
-        audioGlobals.playerStarted = True
-        self.player.setPosition(self.time_)
-        self.player.pause()
+            self.playFlag = True
+        else:
+            if self.playFlag:
+                self.playFlag = False
+                audioGlobals.playerStarted = True
+                self.player.setPosition(self.time_)
+                self.player.pause()
+                self.playButtonAudio.setIcon(self.style().standardIcon(QStyle.SP_MediaPlay))
+            else:
+                self.playFlag = True
+                self.playButtonAudio.setIcon(self.style().standardIcon(QStyle.SP_MediaPause))
+                self.player.play()
+ 
 
     #Stop audio playing
     def audioStop(self):
@@ -868,8 +871,6 @@ class VideoPlayer(QWidget):
                 #----------------------
                 self.source = QUrl.fromLocalFile(os.path.abspath(audioGlobals.wavFileName))
                 self.content = QMediaContent(self.source)
-                self.player = QMediaPlayer()
-                self.playlist = QMediaPlaylist(self)
                 self.playlist.addMedia(self.content)
                 self.player.setPlaylist(self.playlist)
 
