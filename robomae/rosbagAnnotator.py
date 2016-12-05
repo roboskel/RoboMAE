@@ -58,7 +58,7 @@ from audio.graphicalInterfaceAudio import ApplicationWindow
 from video import rosbagDepth
 from video import rosbagRGB
 from video import rosbagVideo
-from video import videoGantChart
+from video import gantChart
 from video.videoGlobals import videoGlobals
 
 from laser import laserGlobals
@@ -308,7 +308,7 @@ class VideoWidget(QWidget):
                             
                     self.repaint()
                     gantChart.axes.clear()
-                    gantChart.drawChart(player.videobox, frameCounter, framerate)
+                    gantChart.drawChart(player.videobox, framerate)
                     gantChart.draw()
                 
                 self.buttonLabels = []
@@ -503,7 +503,7 @@ class VideoPlayer(QWidget):
         videoLayout = self.createVideoButtons()
         
         #Video Gantt Chart
-        self.gantt = videoGantChart.gantShow()
+        self.gantt = gantChart.gantShow()
         gantChart = self.gantt
         gantChart.axes.get_xaxis().set_visible(False)
         gantChart.setFixedSize(1300, 90)
@@ -669,14 +669,14 @@ class VideoPlayer(QWidget):
         self.wave.draw()
         self.wave.setFixedSize(1300, 175)
         
-        self.chart = gA.Chart()
-        audioGlobals.chartFig = self.chart
-        self.chart.setFixedSize(1300, 90)
+        self.audioChart = gA.Chart()
+        audioGlobals.chartFig = self.audioChart
+        self.audioChart.setFixedSize(1300, 90)
         
         #Audio layouts
         waveLayout = QVBoxLayout()
         waveLayout.addWidget(self.wave)
-        waveLayout.addWidget(self.chart)
+        waveLayout.addWidget(self.audioChart)
         
         return waveLayout
         
@@ -863,7 +863,22 @@ class VideoPlayer(QWidget):
                     rosbagAudio.runMain(bag, str(fileName))
                 except:
                     self.errorMessages(6)
-            
+                
+                #DEFINE PLAYER-PLAYLIST
+                #----------------------
+                self.source = QUrl.fromLocalFile(os.path.abspath(audioGlobals.wavFileName))
+                self.content = QMediaContent(self.source)
+                self.player = QMediaPlayer()
+                self.playlist = QMediaPlaylist(self)
+                self.playlist.addMedia(self.content)
+                self.player.setPlaylist(self.playlist)
+
+                self.wave.drawWave()
+                self.wave.drawAnnotations()
+                self.wave.draw()
+                self.audioChart.drawChart()
+                self.audioChart.draw()
+        
             #Depth Handling
             if self.topic_window.temp_topics[1][1] != 'Choose Topic':
                 depthFileName = fileName.replace(".bag","_DEPTH.avi")
@@ -902,7 +917,14 @@ class VideoPlayer(QWidget):
                             
                     self.duration, framerate =  rosbagRGB.get_metadata(rgbFileName)
                     self.videobox = [boundBox(count) for count in range(int(self.message_count))] 
-                     
+                    
+                    if self.rgbButton:
+                        self.mediaPlayer.setMedia(QMediaContent(QUrl.fromLocalFile(os.path.abspath(rgbFileName))))
+                        self.playButton.setEnabled(True)
+                    elif self.depthButton:
+                        self.mediaPlayer.setMedia(QMediaContent(QUrl.fromLocalFile(os.path.abspath(depthFileName))))
+                        self.playButton.setEnabled(True) 
+                        
                 except Exception as e:
                     print(e)
                     self.errorMessages(e[0])	
@@ -913,42 +935,12 @@ class VideoPlayer(QWidget):
                     pass
                 except:
                     self.errorMessages(9)
+                    
+         
+        
 
-        self.wave.axes.clear()
-        self.chart.axes.clear()
-        self.rgbButton.setEnabled(True)
-        self.depthButton.setEnabled(True)
-        try:
-            if self.rgbButton:
-                self.mediaPlayer.setMedia(QMediaContent(QUrl.fromLocalFile(os.path.abspath(rgbFileName))))
-                self.playButton.setEnabled(True)
-            elif self.depthButton:
-                self.mediaPlayer.setMedia(QMediaContent(QUrl.fromLocalFile(os.path.abspath(depthFileName))))
-                self.playButton.setEnabled(True)
-
-            #DEFINE PLAYER-PLAYLIST
-            #----------------------
-            self.source = QtCore.QUrl.fromLocalFile(os.path.abspath(audioGlobals.wavFileName))
-            self.content = QMediaContent(self.source)
-            self.player = QMediaPlayer()
-            self.playlist = QMediaPlaylist(self)
-            self.playlist.addMedia(self.content)
-            self.player.setPlaylist(self.playlist)
-
-
-            self.wave.drawWave()
-            self.wave.drawAnnotations()
-            self.wave.draw()
-
-            self.chart.drawChart(self.videobox, frameCounter, framerate)
-            self.chart.draw()
-
-            self.setWindowTitle(fileName + ' -> Annotation')
-            
-        except:
-            pass
-            
-
+        self.setWindowTitle(fileName + ' -> Annotation')
+     
     
     #Open CSV file
     def openCsv(self):
@@ -982,7 +974,7 @@ class VideoPlayer(QWidget):
                         timestamp  = key[0]
                               
                     gantChart.axes.clear()
-                    gantChart.drawChart(self.videobox, frameCounter, framerate)
+                    gantChart.drawChart(self.videobox, framerate)
                     gantChart.draw()
         else:
             self.errorMessages(10)
@@ -1138,7 +1130,6 @@ class VideoPlayer(QWidget):
         return json_basicLabel,json_highLabel, json_annotationColors, json_eventColors
 
     
-
 #Holds the bound box parameters
 class boundBox(object):
     def __init__(self, parent=None):

@@ -1,1 +1,1 @@
-{"highlevellabels": ["Eat", "Watch tv", "Pick up pill"], "annotationColors": ["#00FF00", "#FF00FF", "#FFFF00", "#00FFFF", "#FFA500"], "basiclabels": ["Sit", "Walk", "Stand", "Stand2Sit", "Sit2Stand"], "eventColors": ["#9fbf1f", "#087649", "#0a5b75"]}
+{"highlevellabels": ["Eat", "Watch tv", "Pick up pill", "Prepare food"], "annotationColors": ["#00FF00", "#FF00FF", "#FFFF00", "#00FFFF", "#FFA500", "#55ff7f"], "basiclabels": ["Sit", "Walk", "Stand", "Stand2Sit", "Sit2Stand", "ads"], "eventColors": ["#9fbf1f", "#087649", "#0a5b75", "#ffaaff"]}

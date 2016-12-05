@@ -14,7 +14,7 @@ class videoGantChart(FigureCanvas):
     def __init__(self, parent=None,width=15,height=1,dpi=100):
         gantChart = Figure(figsize=(width, height), dpi=dpi)
         self.axes = gantChart.add_subplot(111)
-        self.drawChart([], 0, None)
+        self.drawChart([], None)
         
         FigureCanvas.__init__(self, gantChart)
         self.setParent(parent)
@@ -29,7 +29,7 @@ class videoGantChart(FigureCanvas):
 class gantShow(videoGantChart):
     
     #Plot the chart
-    def drawChart(self, videobox, frameCounter, framerate):
+    def drawChart(self, videobox, framerate):
         temp_action = []
         self.timeWithId = []
         self.tickY = []

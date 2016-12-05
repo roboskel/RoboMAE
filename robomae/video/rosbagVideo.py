@@ -18,6 +18,7 @@ Output:
         -compressed : if the image topic is compressed
         -framerate  : image topic framerate
 """
+
 def buffer_video_metadata(bag, input_topic):
     topicKey = 0
     topic = 0
