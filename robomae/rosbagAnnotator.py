@@ -490,6 +490,7 @@ class VideoPlayer(QWidget):
         #Audio variables
         self.player = QMediaPlayer()
         self.playlist = QMediaPlaylist(self)
+        self.playFlag = False
         
         self.topic_window = topicBox.TopicBox()
         
@@ -728,19 +729,18 @@ class VideoPlayer(QWidget):
                 self.start = audioGlobals.startTimeToPlay
                 self.end = audioGlobals.endTimeToPlay
             self.player.setPosition(self.start)
-            self.playFlag = True
+            
+       
+        if self.playFlag:
+            self.playFlag = False
+            audioGlobals.playerStarted = True
+            self.player.setPosition(self.time_)
+            self.player.pause()
+            self.playButtonAudio.setIcon(self.style().standardIcon(QStyle.SP_MediaPlay))
         else:
-            if self.playFlag:
-                self.playFlag = False
-                audioGlobals.playerStarted = True
-                self.player.setPosition(self.time_)
-                self.player.pause()
-                self.playButtonAudio.setIcon(self.style().standardIcon(QStyle.SP_MediaPlay))
-            else:
-                self.playFlag = True
-                self.playButtonAudio.setIcon(self.style().standardIcon(QStyle.SP_MediaPause))
-                self.player.play()
- 
+            self.playFlag = True
+            self.playButtonAudio.setIcon(self.style().standardIcon(QStyle.SP_MediaPause))
+            self.player.play()
 
     #Stop audio playing
     def audioStop(self):

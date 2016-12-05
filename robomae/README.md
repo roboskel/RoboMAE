@@ -33,6 +33,8 @@ Annotate video(RGB and depth), audio and laser measurements stored in rosbags.
     * Edit > Edit Labels  
    * Import previous work
     * File > Import video csv (after selecting rosbag)
+    
+  * Output Files are written at the rosbag file directory  
       
 ## Usage example: video
  * Run the annotator
