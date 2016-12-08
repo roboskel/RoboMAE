@@ -1245,6 +1245,16 @@ class boundBox(object):
             x1 = x1 + math.radians(105)
             x2 = x2 + math.radians(105)
 
+    def copy(self, other):
+        self.box_id = []
+        self.box_Param = []
+        self.annotation = []
+        for i in other.box_id:
+            self.box_id.append(i)
+        for i in other.box_Param:
+            self.box_Param.append(i)
+        for i in other.annotation:
+            self.annotation.append(i)
 
 class MainWindow(QMainWindow):
     
@@ -1338,7 +1348,7 @@ class MainWindow(QMainWindow):
     
     def copyPrevious(self):
         if frameCounter > 0:
-            player.videobox[frameCounter] = player.videobox[frameCounter - 1]
+            player.videobox[frameCounter].copy(player.videobox[frameCounter - 1]) 
             player.videoWidget.repaint()
     
     def shortcuts(self):
