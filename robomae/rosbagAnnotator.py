@@ -1261,6 +1261,7 @@ class MainWindow(QMainWindow):
         self.editMenu = self.menuBar().addMenu("&Video")
         self.editMenu.addAction(self.editLabelsAct)
         self.editMenu.addAction(self.deleteAct)
+        self.editMenu.addAction(self.copyAct)
         self.editMenu.addAction(self.shotcutAct)
         
         
@@ -1278,6 +1279,8 @@ class MainWindow(QMainWindow):
             statusTip="Edit Labels", triggered=self.edit_labels)
         self.deleteAct = QAction("Delete All Boxes", self, shortcut=Qt.ALT + Qt.Key_R,
             statusTip="Delete All Boxes", triggered=self.deleteEvent)
+        self.copyAct = QAction("Copy Previous Boxes", self, shortcut=Qt.ALT + Qt.Key_E,
+            statusTip="Copy Previous Boxes", triggered=self.copyPrevious)
             
         self.shotcutAct = QAction("Shortcuts", self, statusTip="Shortcut information",
             triggered=self.shortcuts)
@@ -1331,6 +1334,11 @@ class MainWindow(QMainWindow):
         global videoCSV
         if bagFile and videoCSV:
             player.videobox[frameCounter].removeAllBox()
+            player.videoWidget.repaint()
+    
+    def copyPrevious(self):
+        if frameCounter > 0:
+            player.videobox[frameCounter] = player.videobox[frameCounter - 1]
             player.videoWidget.repaint()
     
     def shortcuts(self):
