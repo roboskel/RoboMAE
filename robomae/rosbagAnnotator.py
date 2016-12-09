@@ -150,7 +150,8 @@ class VideoWidgetSurface(QAbstractVideoSurface):
             self.stop()
             return False
         else:
-            frameCounter += 1
+            if frameCounter < player.message_count - 1:
+                frameCounter += 1
             self.currentFrame = frame
             self.widget.repaint(self.targetRect)
             return True
@@ -661,6 +662,7 @@ class VideoPlayer(QWidget):
         
     def nextFrame(self):
         global frameCounter
+    
         if frameCounter < self.message_count:
             pos = round(((frameCounter ) * (self.duration * 1000)) / self.message_count)
             self.mediaPlayer.setPosition(pos) 
@@ -1073,6 +1075,8 @@ class VideoPlayer(QWidget):
     def setPosition(self, position):
         global frameCounter
         frameCounter = int(round(self.message_count * position/(self.duration * 1000)))
+        if frameCounter >= self.message_count:
+            frameCounter = self.message_count - 1 
         if (self.topic_window.temp_topics[2][1] != 'Choose Topic') or (self.topic_window.temp_topics[1][1] != 'Choose Topic'):
             self.mediaPlayer.setPosition(position)
         if self.topic_window.temp_topics[0][1] != 'Choose Topic':
@@ -1179,8 +1183,9 @@ class boundBox(object):
             if classify in videoGlobals.classLabels:
                 self.annotation[self.box_id.index(boxid)][0] = classify
             elif classify in videoGlobals.highLabels:
-                if classify not in self.annotation[boxid]:
-                    self.annotation[boxid].append(classify)
+                if len(self.annotation) > boxid:
+                    if classify not in self.annotation[self.box_id.index(boxid)]:
+                        self.annotation[self.box_id.index(boxid)].append(classify)
 
     #Remove high level events
     def removeEvent(self, boxid, action):

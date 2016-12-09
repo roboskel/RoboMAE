@@ -50,7 +50,7 @@ class gantShow(videoGantChart):
                         else:
                             self.boxAtYaxes.append([boxIdx, allactions])
                             self.timeWithId.append([boxIdx, frame_index.timestamp, frame_index.annotation[frame_index.box_id.index(boxIdx)]])
-                            
+
         #Remove duplicates and sort the Y axes
         self.boxAtYaxes.sort()
         self.boxAtYaxes = list(k for k,_ in itertools.groupby(self.boxAtYaxes))
@@ -62,10 +62,10 @@ class gantShow(videoGantChart):
                 self.startTime, self.endTime = self.timeCalc(self.timeWithId, index, action)
                 if self.timeWithId[index][1] == self.endTime:
                     self.color = self.getColor(action)
-                    self.axes.hlines(self.boxAtYaxes.index([self.timeWithId[index][0],action]), self.startTime, self.endTime+(1/framerate),linewidth=8,color=self.color)
+                    self.axes.hlines(self.boxAtYaxes.index([self.timeWithId[index][0],action]), self.startTime, self.endTime+(1/framerate),linewidth=10,color=self.color)
                 else:
                     self.color = self.getColor(action)
-                    self.axes.hlines(self.boxAtYaxes.index([self.timeWithId[index][0],action]), self.startTime,self.endTime,linewidth=8,color=self.color)
+                    self.axes.hlines(self.boxAtYaxes.index([self.timeWithId[index][0],action]), self.startTime,self.endTime,linewidth=10,color=self.color)
 
         for tick in self.axes.yaxis.get_major_ticks():
             tick.label.set_fontsize(9)
