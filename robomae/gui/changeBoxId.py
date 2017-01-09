@@ -71,7 +71,7 @@ class changeBoxId(QWidget):
                         self.videobox[self.frameCounter].box_id[self.index] = self.box_Idx
                     self.frameCounter += 1
                 self.gantChart.axes.clear()
-                self.gantChart.drawChart(self.videobox, self.frameCounter, self.framerate)
+                self.gantChart.drawChart(self.videobox, self.framerate)
                 self.gantChart.draw()
                 self.Ok.clicked.disconnect()
                 self.close()
