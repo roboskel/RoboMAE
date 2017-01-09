@@ -57,6 +57,7 @@ class changeBoxId(QWidget):
     def pressedOk(self):
         try:
             self.box_Idx = int(self.box_Idx)
+            previous_id  = self.videobox[self.frameCounter].box_id[self.index]
             #Check id
             if self.box_Idx in self.videobox[self.frameCounter].box_id:
                 #Box Id already given
@@ -68,7 +69,8 @@ class changeBoxId(QWidget):
             else:
                 while self.frameCounter < len(self.videobox):
                     if(self.index < len(self.videobox[self.frameCounter].box_id)):
-                        self.videobox[self.frameCounter].box_id[self.index] = self.box_Idx
+                        if previous_id == self.videobox[self.frameCounter].box_id[self.index]:
+                            self.videobox[self.frameCounter].box_id[self.index] = self.box_Idx
                     self.frameCounter += 1
                 self.gantChart.axes.clear()
                 self.gantChart.drawChart(self.videobox, self.framerate)
