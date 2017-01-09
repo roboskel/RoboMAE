@@ -958,7 +958,7 @@ class VideoPlayer(QWidget):
             fileName,_ =  QFileDialog.getOpenFileName(self, "Open Csv ", os.path.dirname(os.path.abspath(bagFile)),"(*.csv)")
             if fileName:
                 videoCSV = fileName
-               
+                self.videobox = [boundBox(count) for count in range(int(self.message_count))]
                 box_buff, box_action = rosbagRGB.buffer_video_csv(fileName)
                 if not (box_buff):
                     self.errorMessages(1)
