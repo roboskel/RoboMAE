@@ -3,24 +3,11 @@
 
 import os
 import csv
-import cv2
 import yaml
 import json
 import math
 import time
-import rospy
 import rosbag
-import random
-import argparse
-import textwrap
-import matplotlib
-
-matplotlib.use("Qt5Agg")
-import matplotlib.pyplot as plt
-
-from sensor_msgs.msg import Image
-from sensor_msgs.msg import CompressedImage
-from cv_bridge import CvBridge, CvBridgeError
 
 import sys
 from PyQt5.QtGui import *
@@ -28,19 +15,7 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 from PyQt5.QtMultimedia import *
 from PyQt5.QtMultimediaWidgets import *
-import warnings
-import itertools
 from termcolor import colored
-import numpy as np
-from numpy import arange, sin, pi
-
-import matplotlib.transforms as transforms
-from matplotlib.widgets import Cursor
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
-from matplotlib.figure import Figure
-from matplotlib.collections import LineCollection
-from matplotlib.colors import ListedColormap, BoundaryNorm
-
 
 #Module imports
 from gui import topicBox
@@ -70,21 +45,34 @@ from laser import graphicalInterfaceLaser as gL
 global bagFile
 global csvFile
 global videoCSV
+global headlines
 global frameCounter
 global boxInitialized
 global xBoxCoord
 global BasicTopics
+global delete_index
+global audio_player
+global depth_player
+global video_player
+global laser_player
+global mainWindow
 
-bagFile = None
-videoCSV = None
-frameCounter = 0
-boxInitialized = False
+bagFile   = None
+videoCSV  = None
 xBoxCoord = []
-#Declare the basic topics for the topic box
+frameCounter   = 0
+delete_index   = -1
+audio_player   = False
+depth_player   = False
+video_player   = False
+laser_player   = False
+boxInitialized = False
+headlines      = ["Timestamp", "Rect_id", "Rect_x", "Rect_y", "Rect_W", "Rect_H", "Class"]
 
 
-depthFileName = None
-rgbFileName = None
+mainWindow     = None
+rgbFileName    = None
+depthFileName  = None
 
 
 def get_bag_metadata(bag):
@@ -217,46 +205,49 @@ class VideoWidget(QWidget):
         global gantChart
         global frameCounter
         global framerate
+        global delete_index
         
         self.addEventLabels = []
-        self.stopEventEnabled = False
-        self.addEventEnabled = False
         box_id = None
         if len(player.videobox) > 0:
             if event.reason() == QContextMenuEvent.Mouse:
-                self.context_menu = True
                 posX = event.pos().x()
                 posY = event.pos().y()
                 
-                menu = QMenu(self)
-
-                for i in videoGlobals.classLabels:
-                    self.buttonLabels.append(menu.addAction(i))
-                
-                menu.addSeparator()
-                addEvent = menu.addMenu('Add Event')
-                stopEvent = menu.addMenu('Stop Event')
-                deleteBox = menu.addAction('Delete Box')
-                deleteAllBoxes = menu.addAction('Delete All Boxes')
-                
-                
-                #Initiate add Event menu
-                for label in videoGlobals.highLabels:
-                    self.addEventLabels.append(addEvent.addAction(label))
-                changeId = menu.addAction('Change Id')
-                
                 index = -1
-                stopEvent.setEnabled(False)
-                for i in range(len(player.videobox[frameCounter].box_id)):
-                    self.stopEventLabels = []
-                    self.checkStopEventMenu = []
-                    self.stopEventEnabled = False
+                for i in xrange(len(player.videobox[frameCounter].box_id)):
                     x,y,w,h = player.videobox[frameCounter].box_Param[i]
                     if posX > x and posX < (x+w) and posY > y and posY < (y+h):
                         index = i
-                        
-                if index != -1:             
-                    box_id = player.videobox[frameCounter].box_id[index]
+                
+                #If the mouse click is inside a box
+                if index != -1:          
+                    self.context_menu = True
+                    menu = QMenu(self)
+
+                    for i in videoGlobals.classLabels:
+                        self.buttonLabels.append(menu.addAction(i))
+                    
+                    menu.addSeparator()
+                    addEvent = menu.addMenu('Add Event')
+                    stopEvent = menu.addMenu('Stop Event')
+                    delete = menu.addMenu('Delete')
+                    deleteBox = delete.addAction('Delete Box')
+                    deleteAllBoxes = delete.addAction('Delete All Boxes')
+                    deleteFrom = delete.addAction('Delete From Here')
+                    deleteTo = delete.addAction('Delete To')
+                    
+                    if(delete_index == -1):
+                        deleteTo.setEnabled(False)
+                    stopEvent.setEnabled(False)
+                    self.stopEventLabels = []
+                    self.checkStopEventMenu = []
+                    
+                    #Initiate add Event menu
+                    for label in videoGlobals.highLabels:
+                        self.addEventLabels.append(addEvent.addAction(label))
+                    changeId = menu.addAction('Change Id')
+                    
                     #Show only annotated high classes of the box
                     if len(player.videobox[frameCounter].annotation) > 0:
                         for annot in player.videobox[frameCounter].annotation[index]:
@@ -268,49 +259,56 @@ class VideoWidget(QWidget):
 
                     #Check which submenu clicked
                     if action is not None:
+                        repaint = False
+                        box_id = player.videobox[frameCounter].box_id[index]
+                        
                         if action.parent() == addEvent:
-                            self.addEventEnabled = True
+                            for i, key in enumerate(self.addEventLabels):
+                                if action == key:
+                                    self.annotClass = videoGlobals.highLabels[i]
+                                    self.annotEnabled = True
                         elif action.parent() == stopEvent:
-                            self.stopEventEnabled = True
-
-                    if self.addEventEnabled:
-                        for i, key in enumerate(self.addEventLabels):
-                            if action == key:
-                                self.annotClass = videoGlobals.highLabels[i]
-                                self.annotEnabled = True
-                                self.addEventEnabled = False
-
-                    elif self.stopEventEnabled:
-                        for i, key in enumerate(self.stopEventLabels):
-                            if action == key:
-                                player.videobox[frameCounter].removeEvent(box_id,self.stopEventLabels[i].text() )
-                                self.stopEventEnabled = False
-
-                    for i,key in enumerate(self.buttonLabels):
-                        if action == key:
-                            self.annotClass = videoGlobals.classLabels[i]
-                            self.annotEnabled = True
-                    if action == deleteBox:
-                        player.videobox[frameCounter].removeSpecBox(index)
-                    elif action ==  deleteAllBoxes:
-                        player.videobox[frameCounter].removeAllBox()
-                    elif action == changeId:
-                        #Call the textbox
-                        self.newBoxId = changeBoxId.changeBoxId(player.videobox, index, frameCounter, framerate, gantChart)
-                        self.newBoxId.setGeometry(QRect(500, 100, 250, 100))
-                        self.newBoxId.show()
-                    
-                    if self.annotEnabled:
-                        for counter in range(frameCounter, len(player.videobox)):
-                            if box_id in player.videobox[counter].box_id:
-                                player.videobox[counter].changeClass(box_id, str(self.annotClass))
-                            counter += 1
-                        self.annotEnabled = False
+                            for i, key in enumerate(self.stopEventLabels):
+                                if action == key:
+                                    for j in xrange(frameCounter, len(player.videobox)):
+                                        player.videobox[j].removeEvent(box_id, self.stopEventLabels[i].text())
+                                    repaint = True
+                        elif action.parent() == delete:
+                            if action == deleteBox:
+                                player.videobox[frameCounter].removeSpecBox(index)
+                            elif action ==  deleteAllBoxes:
+                                player.videobox[frameCounter].removeAllBox()
+                            elif action ==  deleteFrom:
+                                delete_index = frameCounter
+                                deleteTo.setEnabled(True)
+                            elif action == deleteTo:
+                                if delete_index > 0:
+                                    for i in xrange(delete_index, frameCounter + 1):
+                                        player.videobox[i].removeAllBox()
+                                    delete_index = -1
+                            repaint = True
+                        else:
+                            for i,key in enumerate(self.buttonLabels):
+                                if action == key:
+                                    self.annotClass = videoGlobals.classLabels[i]
+                                    self.annotEnabled = True
+                            if action == changeId:
+                                #Call the textbox
+                                self.newBoxId = changeBoxId.changeBoxId(player.videobox, index, frameCounter, framerate, gantChart)
+                                self.newBoxId.setGeometry(QRect(500, 100, 250, 100))
+                                self.newBoxId.show()
                             
-                    self.repaint()
-                    gantChart.axes.clear()
-                    gantChart.drawChart(player.videobox, framerate)
-                    gantChart.draw()
+                        if self.annotEnabled:
+                            for i in xrange(frameCounter, len(player.videobox)):
+                                player.videobox[i].changeClass(box_id, str(self.annotClass))
+                            self.annotEnabled = False
+                            repaint = True
+                            
+                        if(repaint):        
+                            self.repaint()
+                            gantChart.axes.clear()
+                            gantChart.drawChart(player.videobox, framerate)
+                            gantChart.draw()
                 
                 self.buttonLabels = []
                 self.context_menu = False
@@ -341,7 +339,7 @@ class VideoWidget(QWidget):
         
         
         if len(player.videobox) > 0 and frameCounter < len(player.videobox):
-            for i in range(len(player.videobox[frameCounter].box_id)):
+            for i in xrange(len(player.videobox[frameCounter].box_id)):
                 if player.videobox[frameCounter].box_id[i] != -1:
                     x,y,w,h = player.videobox[frameCounter].box_Param[i]
                     if not rectPainter.isActive():
@@ -375,7 +373,7 @@ class VideoWidget(QWidget):
                 QPoint.pos1 = QMouseEvent.pos(event)
                 #Check the mouse event is inside a box to initiate drag n drop
                 if len(player.videobox[frameCounter].box_id) > 0:
-                    for i in range(len(player.videobox[frameCounter].box_id)):
+                    for i in xrange(len(player.videobox[frameCounter].box_id)):
                         x,y,w,h = player.videobox[frameCounter].box_Param[i]
                         if (event.pos().x() >= x) and (event.pos().x() <= x + w) and (event.pos().y() >= y) and (event.pos().y() <= y + h):
                             self.index = i
@@ -430,7 +428,7 @@ class VideoWidget(QWidget):
                             timeId = player.videobox[frameCounter].timestamp
                         else:
                             timeId = player.time_buff[frameCounter]
-                        player.videobox[frameCounter].addBox(timeId, None, [x,y,w,h], ['Clear'])
+                        player.videobox[frameCounter].addBox(timeId, None, [x,y,w,h], ['Clear'], [])
                     self.repaint()
             self.moved = False
             self.drag_start = None
@@ -621,6 +619,11 @@ class VideoPlayer(QWidget):
     #VIDEO SWITCH RGB <-> Depth
     def rgbVideo(self, enabled):
         global rgbFileName
+        global audio_player
+        global depth_player
+        global video_player
+        global laser_player
+        
         if enabled:
             self. depthEnable = False
             self.rgbEnable = True
@@ -628,28 +631,32 @@ class VideoPlayer(QWidget):
             self.mediaPlayer.setMedia(QMediaContent(QUrl.fromLocalFile(os.path.abspath(rgbFileName))))
             self.mediaPlayer.setPosition(position)
             self.mediaPlayer.play()
-            if self.topic_window.temp_topics[0][1] != 'Choose Topic':
+            if audio_player:
                 self.player.setPosition(position)
                 self.audioPlay()
-            if self.topic_window.temp_topics[3][1] != 'Choose Topic':
+            if laser_player:
                 self.laserPlay()
             self.playButton.setEnabled(True)
 
     def depth(self, enabled):
         global depthFileName
+        global audio_player
+        global depth_player
+        global video_player
+        global laser_player
 
         if enabled:
             self.rgbEnable = False
             self.depthEnable = True
             position = self.mediaPlayer.position()
-            if self.topic_window.temp_topics[1][1] != 'Choose Topic':
+            if depth_player:
                 self.mediaPlayer.setMedia(QMediaContent(QUrl.fromLocalFile(os.path.abspath(depthFileName))))
                 self.mediaPlayer.setPosition(position)
                 self.mediaPlayer.play()
-            if self.topic_window.temp_topics[0][1] != 'Choose Topic':
+            if audio_player:
                 self.player.setPosition(position)
                 self.audioPlay()
-            if self.topic_window.temp_topics[3][1] != 'Choose Topic':
+            if laser_player:
                 self.laserPlay()
             self.playButton.setEnabled(True)
     
@@ -845,121 +852,141 @@ class VideoPlayer(QWidget):
         global depthFileName
         global rgbFileName
         global Topics
+        global audio_player
+        global depth_player
+        global video_player
+        global laser_player
         start_time = None
                
-        fileName, _ = QFileDialog.getOpenFileName(self, "Open Bag", QDir.currentPath(),"(*.bag)")
-     
+        fileName, _ = QFileDialog.getOpenFileName(self, "Open Bag", QDir.currentPath(),"(*.bag *.avi)")
         
         # create a messsage box for get or load data info
         if fileName:
-            bagFile = fileName
-            try:
-                bag = rosbag.Bag(fileName)
-                Topics, self.duration = get_bag_metadata(bag)
-                #Show window to select topics
-                self.topic_window.show_topics(Topics)
-            except:
-                self.errorMessages(0)
-            
-            #Audio Handling
-            if self.topic_window.temp_topics[0][1] != 'Choose Topic':
+            if fileName.split('.')[1] == 'bag':
+                bagFile = fileName
                 try:
-                    audioGlobals.annotations = []
-                    rosbagAudio.runMain(bag, str(fileName))
+                    bag = rosbag.Bag(fileName)
+                    Topics, self.duration = get_bag_metadata(bag)
+                    #Show window to select topics
+                    self.topic_window.show_topics(Topics)
                 except:
-                    self.errorMessages(6)
+                    self.errorMessages(0)
                 
-                #DEFINE PLAYER-PLAYLIST
-                #----------------------
-                self.source = QUrl.fromLocalFile(os.path.abspath(audioGlobals.wavFileName))
-                self.content = QMediaContent(self.source)
-                self.playlist.addMedia(self.content)
-                self.player.setPlaylist(self.playlist)
+                #Audio Handling
+                if self.topic_window.temp_topics[0][1] != 'Choose Topic':
+                    try:
+                        audio_player = True
+                        audioGlobals.annotations = []
+                        rosbagAudio.runMain(bag, str(fileName))
+                    except:
+                        self.errorMessages(6)
+                    
+                    #DEFINE PLAYER-PLAYLIST
+                    #----------------------
+                    self.source = QUrl.fromLocalFile(os.path.abspath(audioGlobals.wavFileName))
+                    self.content = QMediaContent(self.source)
+                    self.playlist.addMedia(self.content)
+                    self.player.setPlaylist(self.playlist)
 
-                self.wave.drawWave()
-                self.wave.drawAnnotations()
-                self.wave.draw()
-                self.audioChart.drawChart()
-                self.audioChart.draw()
-        
-            #Depth Handling
-            if self.topic_window.temp_topics[1][1] != 'Choose Topic':
-                depthFileName = fileName.replace(".bag","_DEPTH.avi")
-                
-                try:
-                    (self.message_count, compressed, framerate) = rosbagVideo.buffer_video_metadata(bag, self.topic_window.temp_topics[1][1])
-                    rosbagDepth.write_depth_video(bag, depthFileName, self.topic_window.temp_topics[1][1])
-                except:
-                    self.errorMessages(7)
+                    self.wave.drawWave()
+                    self.wave.drawAnnotations()
+                    self.wave.draw()
+                    self.audioChart.drawChart()
+                    self.audioChart.draw()
             
-            #RGB Handling
-            if self.topic_window.temp_topics[2][1] != 'Choose Topic':
-                try:
-                    rgbFileName = fileName.replace(".bag","_RGB.avi")
-                    (self.message_count, compressed, framerate) = rosbagVideo.buffer_video_metadata(bag, self.topic_window.temp_topics[2][1])
+                #Depth Handling
+                if self.topic_window.temp_topics[1][1] != 'Choose Topic':
+                    depth_player = True
+                    depthFileName = fileName.replace(".bag","_DEPTH.avi")
                     
+                    try:
+                        (self.message_count, compressed, framerate) = rosbagVideo.buffer_video_metadata(bag, self.topic_window.temp_topics[1][1])
+                        rosbagDepth.write_depth_video(bag, depthFileName, self.topic_window.temp_topics[1][1])
+                    except:
+                        self.errorMessages(7)
+                
+                #RGB Handling
+                if self.topic_window.temp_topics[2][1] != 'Choose Topic':
+                    try:
+                        video_player = True
+                        rgbFileName = fileName.replace(".bag","_RGB.avi")
+                        (self.message_count, compressed, framerate) = rosbagVideo.buffer_video_metadata(bag, self.topic_window.temp_topics[2][1])
                         
-                    if os.path.isfile(rgbFileName):
-                        print(colored('Loaded RGB video', 'yellow'))
-                    
-                        # just fill time buffer in case that video exists
-                        for topic, msg, t in bag.read_messages(topics=[self.topic_window.temp_topics[2][1]]):
-                            if start_time is None:
-                                start_time = t
-                            self.time_buff.append(t.to_sec() - start_time.to_sec())
-                    else:
-                        #Get bag video metadata
-                        print(colored('Getting rgb data from ROS', 'green'))
-                        (image_buffer, self.time_buff) = rosbagRGB.buffer_rgb_data(bag, self.topic_window.temp_topics[2][1], compressed)
-                        if not image_buffer:
-                            raise Exception(8)
-                    
-                        result  = rosbagRGB.write_rgb_video(rgbFileName, image_buffer, framerate)
-                        if not result:
-                            raise Exception(2)
                             
-                    self.duration, framerate =  rosbagRGB.get_metadata(rgbFileName)
-                    self.videobox = [boundBox(count) for count in range(int(self.message_count))] 
-                    
-                    if self.rgbButton:
-                        self.mediaPlayer.setMedia(QMediaContent(QUrl.fromLocalFile(os.path.abspath(rgbFileName))))
-                        self.playButton.setEnabled(True)
-                    elif self.depthButton:
-                        self.mediaPlayer.setMedia(QMediaContent(QUrl.fromLocalFile(os.path.abspath(depthFileName))))
-                        self.playButton.setEnabled(True) 
+                        if os.path.isfile(rgbFileName):
+                            print(colored('Loaded RGB video', 'yellow'))
                         
-                except Exception as e:
-                    print(e)
-                    self.errorMessages(e[0])	
-			#Laser Topic selection
-            if self.topic_window.temp_topics[3][1] != 'Choose Topic':
-                try:
-                    rosbagLaser.runMain(bag, str(fileName),self.topic_window.temp_topics[3][1])
-                    pass
-                except:
-                    self.errorMessages(9)
-                    
-         
-        
-
+                            # just fill time buffer in case that video exists
+                            for topic, msg, t in bag.read_messages(topics=[self.topic_window.temp_topics[2][1]]):
+                                if start_time is None:
+                                    start_time = t
+                                self.time_buff.append(t.to_sec() - start_time.to_sec())
+                        else:
+                            #Get bag video metadata
+                            print(colored('Getting rgb data from ROS', 'green'))
+                            (image_buffer, self.time_buff) = rosbagRGB.buffer_rgb_data(bag, self.topic_window.temp_topics[2][1], compressed)
+                            if not image_buffer:
+                                raise Exception(8)
+                        
+                            result  = rosbagRGB.write_rgb_video(rgbFileName, image_buffer, framerate)
+                            if not result:
+                                raise Exception(2)
+                                
+                        self.duration, framerate, self.message_count =  rosbagRGB.get_metadata(rgbFileName)
+                        self.videobox = [boundBox(count) for count in xrange(int(self.message_count))] 
+                        
+                        if self.rgbButton:
+                            self.mediaPlayer.setMedia(QMediaContent(QUrl.fromLocalFile(os.path.abspath(rgbFileName))))
+                            self.playButton.setEnabled(True)
+                        elif self.depthButton:
+                            self.mediaPlayer.setMedia(QMediaContent(QUrl.fromLocalFile(os.path.abspath(depthFileName))))
+                            self.playButton.setEnabled(True) 
+                            
+                        
+                    except Exception as e:
+                        print(e)
+                        self.errorMessages(e[0])	
+                #Laser Topic selection
+                if self.topic_window.temp_topics[3][1] != 'Choose Topic':
+                    try:
+                        laser_player = True
+                        rosbagLaser.runMain(bag, str(fileName),self.topic_window.temp_topics[3][1])
+                        pass
+                    except:
+                        self.errorMessages(9)
+            else:
+                video_player = True
+                self.duration, framerate, self.message_count  =  rosbagRGB.get_metadata(fileName)
+                self.videobox = [boundBox(count) for count in xrange(int(self.message_count))] 
+                
+                if self.rgbButton:
+                    self.mediaPlayer.setMedia(QMediaContent(QUrl.fromLocalFile(os.path.abspath(fileName))))
+                    self.playButton.setEnabled(True)
+                rgbFileName = fileName
+            gantChart.axes.clear()
+            gantChart.drawChart(player.videobox, framerate)
+            gantChart.draw()
+            mainWindow.setWindowTitle(fileName);    
         self.setWindowTitle(fileName + ' -> Annotation')
      
     
     #Open CSV file
     def openCsv(self):
         global framerate
+        global rgbFileName
         global bagFile
         global videoCSV
+        global headlines
         self.box_buffer = []
         
-        if bagFile is not None:
+        if rgbFileName is not None:
             
             # OPEN VIDEO - DEPTH - AUDIO
-            fileName,_ =  QFileDialog.getOpenFileName(self, "Open Csv ", os.path.dirname(os.path.abspath(bagFile)),"(*.csv)")
+            fileName,_ =  QFileDialog.getOpenFileName(self, "Open Csv ", os.path.dirname(os.path.abspath(rgbFileName)),"(*.csv)")
             if fileName:
                 videoCSV = fileName
-                self.videobox = [boundBox(count) for count in range(int(self.message_count))]
-                box_buff, box_action = rosbagRGB.buffer_video_csv(fileName)
+                self.videobox = [boundBox(count) for count in xrange(int(self.message_count))]
+                headlines, box_buff, box_action, features = rosbagRGB.buffer_video_csv(fileName)
                 if not (box_buff):
                     self.errorMessages(1)
                 else:
@@ -969,11 +996,13 @@ class VideoPlayer(QWidget):
                     timestamp = None
                     counter = 0
                     self.box_actionBuffer = [key for key in box_action]
-                    for idx, key in enumerate(self.box_buffer):
+                    self.features = [key for key in features]
+                    a = 0
+                    for i, key in enumerate(self.box_buffer):
                         if timestamp is not None:
                             if timestamp != key[0]:
                                 counter += 1
-                        self.videobox[counter].addBox(self.time_buff[counter], key[1], key[2:], self.box_actionBuffer[idx])   
+                        self.videobox[counter].addBox(key[0], key[1], key[2:], self.box_actionBuffer[i], features[i])
                         timestamp  = key[0]
                               
                     gantChart.axes.clear()
@@ -981,7 +1010,42 @@ class VideoPlayer(QWidget):
                     gantChart.draw()
         else:
             self.errorMessages(10)
-		
+	
+    #Writes the boxes to csv
+    def writeCSV(self):
+        global headlines
+        global rgbFileName
+        global video_player
+        if video_player:
+            
+            csvFileName = rgbFileName.replace(rgbFileName.split(".")[-1],"csv")
+            with open(csvFileName, 'w') as file:
+                csv_writer = csv.writer(file, delimiter='\t')
+                csv_writer.writerow(headlines)
+                for i in xrange(0, len(self.videobox)):
+                    box = self.videobox[i]
+                    if len(box.box_id) > 0:
+                        for j in xrange(0, len(box.box_id)):
+                            master = []
+                            append = master.append
+                            if box.box_id[j] != -1:
+                                append(box.timestamp)
+                                append(box.box_id[j])
+                                for param in box.box_Param[j][::]:
+                                    append(param)
+                                for param in box.features[j][::]:
+                                    append(param)
+                                append(box.annotation[j])    
+                                
+                                csv_writer.writerow(master)
+                            else:
+                                csv_writer.writerow([box.timestamp])
+                    else:
+                        csv_writer.writerow([box.timestamp])
+                    
+                print ("Csv written at: ", csvFileName) 
+                
+                	
     def errorMessages(self, index):
         msgBox = QMessageBox()
         msgBox.setIcon(msgBox.Warning)
@@ -1022,24 +1086,29 @@ class VideoPlayer(QWidget):
 
     def play(self):
         global frameCounter
+        global audio_player
+        global depth_player
+        global video_player
+        global laser_player
+        
         if self.mediaPlayer.state() == QMediaPlayer.PlayingState:
             self.videoPosition()
             self.mediaPlayer.pause()
-            if self.topic_window.temp_topics[0][1] != 'Choose Topic':
+            if audio_player:
                 self.audioPause()
-            if self.topic_window.temp_topics[3][1] != 'Choose Topic':
+            if laser_player:
                 self.laserPause()
             self.time_ = self.positionSlider
 
         else:
             self.time_ = self.mediaPlayer.position()
-            if self.topic_window.temp_topics[0][1] != 'Choose Topic':
+            if audio_player:
                 self.player.setPosition(self.time_)
                 self.end = audioGlobals.duration*1000 - 10
                 self.audioPlay()
-            if self.topic_window.temp_topics[2][1] != 'Choose Topic':
+            if video_player:
                 self.mediaPlayer.play()
-            if self.topic_window.temp_topics[3][1] != 'Choose Topic':
+            if laser_player:
                 self.laserPlay()
 
         # >> Get slider position for bound box
@@ -1074,43 +1143,20 @@ class VideoPlayer(QWidget):
 
     def setPosition(self, position):
         global frameCounter
+        global audio_player
+        global depth_player
+        global video_player
+        global laser_player
+        
         frameCounter = int(round(self.message_count * position/(self.duration * 1000)))
         if frameCounter >= self.message_count:
             frameCounter = self.message_count - 1 
-        if (self.topic_window.temp_topics[2][1] != 'Choose Topic') or (self.topic_window.temp_topics[1][1] != 'Choose Topic'):
+        if video_player or depth_player:
             self.mediaPlayer.setPosition(position)
-        if self.topic_window.temp_topics[0][1] != 'Choose Topic':
+        if audio_player:
             self.player.setPosition(position)
 
-    #Writes the boxes to csv
-    def writeCSV(self):
-        global bagFile
-        global videoCSV
-        if bagFile and videoCSV:
-            
-            csvFileName = bagFile.replace(".bag","_out.csv")
-            with open(csvFileName, 'w') as file:
-                csv_writer = csv.writer(file, delimiter='\t')
-                headlines = ['Timestamp','Rect_id', 'Rect_x','Rect_y','Rect_W','Rect_H','Class']
-                csv_writer.writerow(headlines)
-                for i in range(0, len(self.videobox)):
-                    box = self.videobox[i]
-                    if len(box.box_id) > 0:
-                        for j in range(0, len(box.box_id)):
-                            master = []
-                            if box.box_id[j] != -1:
-                                master.append(box.timestamp)
-                                master.append(box.box_id[j])
-                                for param in box.box_Param[j][::]:
-                                    master.append(param)
-                                master.append(box.annotation[j])    
-                                csv_writer.writerow(master)
-                            else:
-                                csv_writer.writerow([box.timestamp])
-                    else:
-                        csv_writer.writerow([self.time_buff[i]])
-                    
-                print ("Csv written at: ", csvFileName)   
+      
    
     def closeEvent(self, event):
         self.writeCSV()
@@ -1144,15 +1190,16 @@ class boundBox(object):
         self.timestamp  = None
         self.box_id     = []
         self.box_Param  = []
+        self.features   = []
         self.annotation = []
 
-    def addBox(self, time, box_id, params, classify):
+    def addBox(self, time, box_id, params, classify, features):
         self.timestamp = time
         
         boxNumber = -1
         if box_id is None:
             #If id already in the list then give the next id
-            for i in range(len(self.box_id)):
+            for i in xrange(len(self.box_id)):
                 if(i != self.box_id[i]):
                     boxNumber = i
             if boxNumber == -1:
@@ -1162,18 +1209,17 @@ class boundBox(object):
         self.box_id.append(boxNumber)
         self.box_Param.append(params[::])
         self.annotation.append(classify)
-
-        self.calcAngle()
+        self.features.append(features)
 
     def removeAllBox(self):
-        #~ self.timestamp     = None
         self.box_id[:]     = []
+        self.features[:]   = []
         self.box_Param[:]  = []
         self.annotation[:] = []
 
     def removeSpecBox(self, index):
-        #~ self.timestamp = None
         self.box_id.pop(index)
+        self.features.pop(index)
         self.box_Param.pop(index)
         self.annotation.pop(index)
         
@@ -1181,85 +1227,32 @@ class boundBox(object):
     def changeClass(self, boxid, classify):
         if boxid in self.box_id:
             if classify in videoGlobals.classLabels:
-                self.annotation[self.box_id.index(boxid)][0] = classify
-            elif classify in videoGlobals.highLabels:
-                if len(self.annotation) > boxid:
-                    if classify not in self.annotation[self.box_id.index(boxid)]:
-                        self.annotation[self.box_id.index(boxid)].append(classify)
+                self.annotation[boxid][0] = classify
+            elif classify not in self.annotation[self.box_id.index(boxid)]:
+                self.annotation[self.box_id.index(boxid)].append(classify)
 
     #Remove high level events
     def removeEvent(self, boxid, action):
-        global frameCounter
-        #boxid is the index of boxes
-        for key in self.annotation[boxid]:
-            if action == key:
-                self.annotation[boxid].remove(key)
-        frameNumber = frameCounter + 1
-        #Annotate the box at remaining frames
-        while frameNumber < len(player.videobox):
-            if boxid >= len(player.videobox[frameNumber].box_id):
-                break
-            if action in player.videobox[frameNumber].annotation[boxid]:
-                player.videobox[frameNumber].annotation[boxid].remove(action)
-            frameNumber += 1
-
-    def calcAngle(self):
-        # let's say that camera angle is 58 degrees..
-        camAngle = 58
-        camAngleRadians = math.radians(camAngle)
-        imWidth = 640 #pixels
-
-        for index in range(len(self.box_Param)):
-            # CENTRALIZE camera and laser
-            # xCamera, yCamera, zCamera <--> xLaser, yLaser, zLaser IN METERS
-            # zCamera and zLaser doesn't matter
-
-            xCamera = 0
-            xLaser = 0
-
-            # Convert meters to pixels
-            # 1m = 3779.527559px ; 1px = 0.000265m
-            xCamera = xCamera * 3779.527559
-            xLaser = xLaser * 3779.527559
-            diff = xLaser - xCamera
-
-            z = (imWidth/2)/ sin(camAngleRadians/2)
-            #Construct the axis of triangle
-            MK = math.sqrt(pow(z,2) - pow(imWidth/2,2))
-            x1 = self.box_Param[index][0] + diff
-            x2 = self.box_Param[index][0] + self.box_Param[index][2] + diff
-
-            startPoint = abs(x1 - (imWidth/2))
-            x1Angle = math.atan(startPoint/MK)
-            if x1-(imWidth/2) > 0:
-                x1Angle = x1Angle + (camAngleRadians/2)
-            else:
-                x1Angle = (camAngleRadians/2) - x1Angle
-
-            endPoint = abs(x2 - (imWidth/2))
-            x2Angle = math.atan(endPoint/MK)
-            if x2-(imWidth/2) > 0:
-                x2Angle = x2Angle + (camAngleRadians/2)
-            else:
-                x2Angle = (camAngleRadians/2) - x2Angle
-
-
-            #angle = abs(math.degrees(x2Angle - x1Angle))
-
-            # angle to laser 270 degrees
-            x1 = x1 + math.radians(105)
-            x2 = x2 + math.radians(105)
+        if boxid in self.box_id:
+            #boxid is the index of boxes
+            for key in self.annotation[self.box_id.index(boxid)]:
+                if action == key:
+                    self.annotation[self.box_id.index(boxid)].remove(key)
 
     def copy(self, other):
         self.box_id = []
-        self.box_Param = []
+        self.features   = []
+        self.box_Param  = []
         self.annotation = []
+        
         for i in other.box_id:
             self.box_id.append(i)
         for i in other.box_Param:
             self.box_Param.append(i)
         for i in other.annotation:
             self.annotation.append(i)
+        for i in other.features:
+            self.features.append(i)
 
 class MainWindow(QMainWindow):
     
@@ -1294,8 +1287,8 @@ class MainWindow(QMainWindow):
             statusTip="Edit Labels", triggered=self.edit_labels)
         self.deleteAct = QAction("Delete All Boxes", self, shortcut=Qt.ALT + Qt.Key_R,
             statusTip="Delete All Boxes", triggered=self.deleteEvent)
-        self.copyAct = QAction("Copy Previous Boxes", self, shortcut=Qt.ALT + Qt.Key_E,
-            statusTip="Copy Previous Boxes", triggered=self.copyPrevious)
+        self.copyAct = QAction("Copy Latest Boxes", self, shortcut=Qt.ALT + Qt.Key_E,
+            statusTip="Copy Latest Boxes", triggered=self.copyPrevious)
             
         self.shotcutAct = QAction("Shortcuts", self, statusTip="Shortcut information",
             triggered=self.shortcuts)
@@ -1347,14 +1340,23 @@ class MainWindow(QMainWindow):
     def deleteEvent(self, event):
         global bagFile
         global videoCSV
-        if bagFile and videoCSV:
+        if bagFile:
             player.videobox[frameCounter].removeAllBox()
             player.videoWidget.repaint()
     
     def copyPrevious(self):
         if frameCounter > 0:
-            player.videobox[frameCounter].copy(player.videobox[frameCounter - 1]) 
+            for i in xrange(frameCounter - 1, 0, -1):
+                box = player.videobox[i]
+                if box.box_id:
+                    for j in xrange(i + 1, frameCounter + 1):
+                        player.videobox[j].copy(box) 
+                        player.videobox[j].timestamp = player.time_buff[j]
+                    break
             player.videoWidget.repaint()
+            gantChart.axes.clear()
+            gantChart.drawChart(player.videobox, framerate)
+            gantChart.draw()
     
     def shortcuts(self):
         self.shortcuts = videoShortcuts.videoShortCuts()
@@ -1371,8 +1373,8 @@ if __name__ == '__main__':
     app = QApplication(sys.argv)
     
     player = VideoPlayer()
-    main = MainWindow(player)
-    main.show()
+    mainWindow = MainWindow(player)
+    mainWindow.show()
 
     app.exec_()
     try:

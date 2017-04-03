@@ -1,17 +1,16 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import json
 import itertools
-from video.videoGlobals import videoGlobals
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from PyQt5.QtWidgets import QSizePolicy
+from video.videoGlobals import videoGlobals
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 
 
 class videoGantChart(FigureCanvas):
     
-    def __init__(self, parent=None,width=15,height=1,dpi=100):
+    def __init__(self, parent=None, width=15, height=1, dpi=100):
         gantChart = Figure(figsize=(width, height), dpi=dpi)
         self.axes = gantChart.add_subplot(111)
         self.drawChart([], None)
@@ -22,8 +21,6 @@ class videoGantChart(FigureCanvas):
         FigureCanvas.setSizePolicy(self, QSizePolicy.Expanding, QSizePolicy.Expanding)
         FigureCanvas.updateGeometry(self)
 
-    def drawChart(self):
-        pass
 
 #Class for the gantChart
 class gantShow(videoGantChart):
@@ -31,70 +28,82 @@ class gantShow(videoGantChart):
     #Plot the chart
     def drawChart(self, videobox, framerate):
         temp_action = []
-        self.timeWithId = []
-        self.tickY = []
-        self.tickX = []
-        self.boxAtYaxes = []
+        timeWithId = [[] for count in xrange(len(videobox))] 
+        tickY = []
+        tickX = []
         self.axes.hlines(0,0,0)
-
-        for i in range(0, len(videobox)):
+        
+        for i in xrange(len(videobox)):
             frame_index = videobox[i]
-            for i in range(len(frame_index.box_id)):
-                boxIdx = frame_index.box_id[i]
+            time_append = timeWithId[i].append
+            for j in xrange(len(frame_index.box_id)):
+                boxIdx = frame_index.box_id[j]
                 if boxIdx != -1:
-                    for allactions in frame_index.annotation[i]:
+                    for allactions in frame_index.annotation[j]:
                         if isinstance(allactions, list):
                             for action in allactions:
-                                self.boxAtYaxes.append([boxIdx, action])
-                                self.timeWithId.append([boxIdx, frame_index.timestamp, action])
+                                time_append([boxIdx, action])
                         else:
-                            self.boxAtYaxes.append([boxIdx, allactions])
-                            self.timeWithId.append([boxIdx, frame_index.timestamp, frame_index.annotation[frame_index.box_id.index(boxIdx)]])
+                            time_append([boxIdx, allactions])
 
-        #Remove duplicates and sort the Y axes
-        self.boxAtYaxes.sort()
-        self.boxAtYaxes = list(k for k,_ in itertools.groupby(self.boxAtYaxes))
-
-        for key in range(len(self.boxAtYaxes)):
-            self.tickY.append(key)
-        for index in range(len(self.timeWithId)):
-            for action in self.timeWithId[index][2]:
-                self.startTime, self.endTime = self.timeCalc(self.timeWithId, index, action)
-                if self.timeWithId[index][1] == self.endTime:
-                    self.color = self.getColor(action)
-                    self.axes.hlines(self.boxAtYaxes.index([self.timeWithId[index][0],action]), self.startTime, self.endTime+(1/framerate),linewidth=10,color=self.color)
-                else:
-                    self.color = self.getColor(action)
-                    self.axes.hlines(self.boxAtYaxes.index([self.timeWithId[index][0],action]), self.startTime,self.endTime,linewidth=10,color=self.color)
+        boxAtYaxes = sorted(t for i in timeWithId for t in i)
+        boxAtYaxes = list(k for k,_ in itertools.groupby(boxAtYaxes))
+        
+        ticky_append = tickY.append
+        for key in xrange(len(boxAtYaxes)):
+            ticky_append(key)
+        
+        if len(boxAtYaxes) > 0:
+            for tup in boxAtYaxes:
+                idx, action = tup[0], tup[1]
+                index = 0
+                start_time = 0
+                end_time   = 1
+                hor_lines = self.axes.hlines
+                get_color = self.getColor
+                time_calc = self.timeCalc
+                while start_time < end_time:
+                    start_time, end_time, index = time_calc(timeWithId, idx, index, action)
+                    color = get_color(action)
+                    hor_lines(boxAtYaxes.index([idx, action]), start_time, end_time,linewidth=10,color=color)
+                    
 
         for tick in self.axes.yaxis.get_major_ticks():
             tick.label.set_fontsize(9)
 
         self.axes.set_xticklabels([])
-        self.axes.set_yticks(self.tickY)
-        self.axes.set_ylim([-1,len(self.boxAtYaxes)])
-        self.axes.set_yticklabels([str(index[0]) + "::" + str(index[1]).ljust(5) for index in self.boxAtYaxes])
+        self.axes.set_yticks(tickY)
+        self.axes.set_ylim([-1, len(boxAtYaxes)])
+        self.axes.set_yticklabels([str(index[0]) + "::" + str(index[1]).ljust(5) for index in boxAtYaxes])
         self.axes.grid(True)
 
     #Calculates the end time for each annotation to plot
-    def timeCalc(self, time, curr, activity):
-        temp_id = time[curr][0]
-        startTime = time[curr][1]
-        endTime = time[curr][1]
-        while activity in time[curr][2] and temp_id in time[curr]:
-            endTime = time[curr][1]
-            curr += 1
-            if curr > len(time)-1:
+    def timeCalc(self, box_list, idx, index, action):
+        temp_id = idx
+        start_time = 0
+        end_time = 0
+        
+        for i in xrange(index, len(box_list)-1): 
+            flag = False
+            index = i
+            box_tuple = box_list[i]
+            for entry in box_tuple:
+                if temp_id == entry[0] and action == entry[1]:
+                    flag = True
+                    if start_time == 0:
+                        start_time = i
+                    break
+            if not flag and start_time != 0:
                 break
-        return startTime,endTime
+        if start_time != 0:
+            end_time = index - 1
+        return start_time, end_time, index
 
     #Calculates the color for the gantChart and bound Boxes
     def getColor(self, label):
-        if label == 'Clear':
-                #color = 'Clear'
-            return '#0000FF'
-        elif label in videoGlobals.classLabels:
-                #color = label
-            return videoGlobals.annotationColors[videoGlobals.classLabels.index(label) % len(videoGlobals.classLabels)]
+        color = '#0000FF'
+        if label in videoGlobals.classLabels:
+            color = videoGlobals.annotationColors[videoGlobals.classLabels.index(label) % len(videoGlobals.classLabels)]
         elif label in videoGlobals.highLabels:
-            return videoGlobals.eventColors[videoGlobals.highLabels.index(label) % len(videoGlobals.highLabels)]
+            color = videoGlobals.eventColors[videoGlobals.highLabels.index(label) % len(videoGlobals.highLabels)]
+        return color

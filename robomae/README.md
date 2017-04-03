@@ -1,5 +1,6 @@
-# rosbagAnnotator
+# multimedia-annotator
 
+Annotate video either in common formats or rosbags.
 Annotate video(RGB and depth), audio and laser measurements stored in rosbags.
 
 ## Installation

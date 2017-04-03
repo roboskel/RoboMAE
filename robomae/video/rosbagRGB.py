@@ -5,12 +5,10 @@ import os
 import csv
 import cv2
 import ast
-import yaml
 import subprocess
+import numpy as np
 
 from termcolor import colored
-from sensor_msgs.msg import Image
-from sensor_msgs.msg import CompressedImage
 from cv_bridge import CvBridge, CvBridgeError
 
 import rosbagVideo
@@ -39,7 +37,6 @@ def buffer_rgb_data(bag, input_topic, compressed):
 
         #Get the image
         if not compressed:
-	    
             try:
                 cv_image = bridge.imgmsg_to_cv2(msg, "bgr8")
             except CvBridgeError as e:
@@ -62,37 +59,42 @@ Input:
 
 Output:
         -box_buff       : list of image frames
-        -metrics        : list of time frames corresponding to each image
         -box_buff_action: list of time frames corresponding to each image
 """
 def buffer_video_csv(csv_file):
-    box_buff   = []
+    features 	    = []
+    headlines 	    = []
+    box_buff   	    = []
     box_buff_action = []
-
     if csv_file is not None and os.path.exists(csv_file):
         with open(csv_file, 'r') as file_obj:
-            csv_reader = csv.reader(file_obj, delimiter = '\t')
-            row_1 = next(csv_reader)
-            try:
-		
+	    try:
+		csv_reader = csv.reader(file_obj, delimiter = '\t')
+		headlines = next(csv_reader)
+		headlines = filter(None, headlines)
 		for row in csv_reader:
 		    timestamp = float(row[0])
 		    if len(row) > 2:
 			(rec_id, x, y, width, height) = map(int, row[1:6])
 			box_buff.append((timestamp, rec_id, x, y, width, height))
-			if 'Class' in row_1:
-			    string = ast.literal_eval(row[6])
+			if 'Class' in headlines:
+			    features.append(map(float, row[6:-1]))
+			    string = ast.literal_eval(row[-1])
 			    box_buff_action.append(string)
 			else:
+			    features.append(map(float, row[6::]))
 			    box_buff_action.append(["Clear"])
 			    
 		    else:
 			box_buff_action.append(["Clear"])
 			box_buff.append((timestamp, -1, 0, 0, 0, 0))
-		
+			features.append([0])
+		if 'Class' not in headlines:
+		    headlines.append('Class')
 	    except:
                print("Error processing video csv")
-    return box_buff, box_buff_action
+	       
+    return headlines, box_buff, box_buff_action, features
 
 """
 Writes rgb video from buffer to selected path
@@ -143,7 +145,9 @@ def get_metadata(input_video):
     result = subprocess.Popen('ffprobe -i ' + str(input_video) + ' -show_entries format=duration -v quiet -of csv="p=0"', stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
     duration = float(result.communicate()[0])
     result = subprocess.Popen('ffprobe -v error -select_streams v:0 -show_entries stream=avg_frame_rate -of default=noprint_wrappers=1:nokey=1 ' + str(input_video), stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
-    framerate = result.communicate()[0]
-    framerate = float(framerate.split('/')[0])/float(framerate.split('/')[1])
-    return duration, framerate
+    frame_info = result.communicate()[0]
+    framerate = float(frame_info.split('/')[0])/float(frame_info.split('/')[1])
+    result = subprocess.Popen('ffprobe -v error -select_streams v:0 -show_entries stream=nb_frames -of default=noprint_wrappers=1:nokey=1 ' + str(input_video), stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
+    frame_count = int(result.communicate()[0])
+    return duration, framerate, frame_count
 	    
