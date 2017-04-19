@@ -1,21 +1,17 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'videoShortcuts.ui'
-#
-# Created by: PyQt5 UI code generator 5.7
-#
-# WARNING! All changes made in this file will be lost!
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 
+#Create a table and add the Laser shortcuts and their definition
 class Ui_Form(object):
     def setupUi(self, Form):
         Form.setObjectName("Form")
         Form.setWindowModality(QtCore.Qt.ApplicationModal)
         Form.setEnabled(True)
-        Form.resize(230, 100)
+        Form.resize(400, 500)
         self.tableWidget = QtWidgets.QTableWidget(Form)
-        self.tableWidget.setGeometry(QtCore.QRect(0, 10, 281, 141))
+        self.tableWidget.setGeometry(QtCore.QRect(0, 100, 481, 441))
         self.tableWidget.setStyleSheet("")
         self.tableWidget.setFrameShape(QtWidgets.QFrame.NoFrame)
         self.tableWidget.setShowGrid(True)
@@ -24,7 +20,7 @@ class Ui_Form(object):
         self.tableWidget.setCornerButtonEnabled(True)
         self.tableWidget.setObjectName("tableWidget")
         self.tableWidget.setColumnCount(2)
-        self.tableWidget.setRowCount(3)
+        self.tableWidget.setRowCount(4)
         item = QtWidgets.QTableWidgetItem()
         font = QtGui.QFont()
         font.setKerning(True)
@@ -35,6 +31,8 @@ class Ui_Form(object):
         self.tableWidget.setVerticalHeaderItem(1, item)
         item = QtWidgets.QTableWidgetItem()
         self.tableWidget.setVerticalHeaderItem(2, item)
+        item = QtWidgets.QTableWidgetItem()
+        self.tableWidget.setVerticalHeaderItem(3, item)
         item = QtWidgets.QTableWidgetItem()
         self.tableWidget.setHorizontalHeaderItem(0, item)
         item = QtWidgets.QTableWidgetItem()
@@ -54,33 +52,42 @@ class Ui_Form(object):
         self.tableWidget.setItem(2, 0, item)
         item = QtWidgets.QTableWidgetItem()
         self.tableWidget.setItem(2, 1, item)
+        item = QtWidgets.QTableWidgetItem()
+        self.tableWidget.setItem(3, 0, item)
+        item = QtWidgets.QTableWidgetItem()
+        self.tableWidget.setItem(3, 1, item)
+
         self.tableWidget.horizontalHeader().setVisible(False)
-        self.tableWidget.horizontalHeader().setDefaultSectionSize(115)
+        self.tableWidget.horizontalHeader().setDefaultSectionSize(215)
         self.tableWidget.horizontalHeader().setHighlightSections(False)
-        self.tableWidget.horizontalHeader().setMinimumSectionSize(26)
+        self.tableWidget.horizontalHeader().setMinimumSectionSize(46)
         self.tableWidget.verticalHeader().setVisible(False)
         self.tableWidget.verticalHeader().setHighlightSections(False)
 
-	self.retranslateUi(Form)
+        self.retranslateLaserUi(Form)
        
         QtCore.QMetaObject.connectSlotsByName(Form)
 
-    def retranslateUi(self, Form):
+
+    def retranslateLaserUi(self, Form):
         _translate = QtCore.QCoreApplication.translate
-        Form.setWindowTitle(_translate("Form", "Shortcuts"))
+        Form.setWindowTitle(_translate("Form", "Laser Shortcuts"))
         __sortingEnabled = self.tableWidget.isSortingEnabled()
         self.tableWidget.setSortingEnabled(False)
         item = self.tableWidget.item(0, 0)
-        item.setText(_translate("Form", "Alt + A"))
+        item.setText(_translate("Form", "Alt + Z"))
         item = self.tableWidget.item(0, 1)
-        item.setText(_translate("Form", "Back 1 frame"))
+        item.setText(_translate("Form", "Back 1 scan"))
         item = self.tableWidget.item(1, 0)
-        item.setText(_translate("Form", "Alt + D"))
+        item.setText(_translate("Form", "Alt + C"))
         item = self.tableWidget.item(1, 1)
-        item.setText(_translate("Form", "Forward 1 frame"))
+        item.setText(_translate("Form", "Forward 1 scan"))
         item = self.tableWidget.item(2, 0)
-        item.setText(_translate("Form", "Alt + R"))
+        item.setText(_translate("Form", "Alt +X"))
         item = self.tableWidget.item(2, 1)
-        item.setText(_translate("Form", "Delete all boxes"))
+        item.setText(_translate("Form", "Get a single point to a box"))
+        item = self.tableWidget.item(3, 0)
+        item.setText(_translate("Form", "A + click"))
+        item = self.tableWidget.item(3, 1)
+        item.setText(_translate("Form", "Create Boxes to this Scan"))
         self.tableWidget.setSortingEnabled(__sortingEnabled)
-

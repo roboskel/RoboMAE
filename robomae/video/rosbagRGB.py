@@ -65,33 +65,44 @@ def buffer_video_csv(csv_file):
     headlines 	    = []
     box_buff   	    = []
     box_buff_action = []
+
     if csv_file is not None and os.path.exists(csv_file):
         with open(csv_file, 'r') as file_obj:
-	    try:
-		csv_reader = csv.reader(file_obj, delimiter = '\t')
-		headlines = next(csv_reader)
-		headlines = filter(None, headlines)
-		for row in csv_reader:
-		    timestamp = float(row[0])
-		    if len(row) > 2:
-			(rec_id, x, y, width, height) = map(int, row[1:6])
-			box_buff.append((timestamp, rec_id, x, y, width, height))
-			if 'Class' in headlines:
-			    features.append(map(float, row[6:-1]))
-			    string = ast.literal_eval(row[-1])
-			    box_buff_action.append(string)
-			else:
-			    features.append(map(float, row[6::]))
-			    box_buff_action.append(["Clear"])
-			    
-		    else:
-			box_buff_action.append(["Clear"])
-			box_buff.append((timestamp, -1, 0, 0, 0, 0))
-			features.append([0])
-		if 'Class' not in headlines:
-		    headlines.append('Class')
-	    except:
-               print("Error processing video csv")
+    	    try:
+
+                csv_reader = csv.reader(file_obj, delimiter = '\t')
+
+
+                #if len(csv_reader[0]) == 1:
+                #    print 'mpike!'
+                #    csv_reader = csv.reader(file_obj, delimiter = ',')
+
+                headlines = next(csv_reader)
+                headlines = filter(None, headlines)
+
+                for row in csv_reader:
+                    timestamp = float(row[0])
+
+                    if len(row) > 2:
+                        (rec_id, x, y, width, height) = map(int, row[1:6])
+                        box_buff.append((timestamp, rec_id, x, y, width, height))
+                        
+                        if 'Class' in headlines:
+                            features.append(map(float, row[6:-1]))
+                            string = ast.literal_eval(row[-1])
+                            box_buff_action.append(string)
+                        else:
+                            features.append(map(float, row[6::]))
+                            box_buff_action.append(["Clear"])
+                	    
+                    else:
+                        box_buff_action.append(["Clear"])
+                        box_buff.append((timestamp, -1, 0, 0, 0, 0))
+                        features.append([0])
+                if 'Class' not in headlines:
+                    headlines.append('Class')
+            except:
+                print("Error processing video csv")
 	       
     return headlines, box_buff, box_buff_action, features
 

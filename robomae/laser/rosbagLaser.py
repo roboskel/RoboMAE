@@ -1,96 +1,145 @@
 #!/usr/bin/env python
 import roslib
-import cv2
-from sensor_msgs.msg import Image
-from sensor_msgs.msg import CompressedImage
 from sensor_msgs.msg import LaserScan
-from cv_bridge import CvBridge, CvBridgeError
 import rospy
 from std_msgs.msg import String
 import signal
 import os
 import sys
-import time
-import threading
 import rosbag
 import yaml
 import numpy as np
-import matplotlib.pyplot as plt
-import argparse
-import textwrap
-import math
-#import qt_laserscan
-import graphicalInterfaceLaser as gL
+from clustering import AutoScannerAnnotator
+
+global frequency
+global duration
+global wall
+
+wall = None
 
 
-programmName = os.path.basename(sys.argv[0])
-laserDistances = []
-theta = []
-sx = []
-sy = []
+def get_range_data(bag, input_topic, wall_limit):
 
-def play_bag_file(bag, input_topic):
-    global laserDistances, sx, sy, theta
+    global frequency, wall
 
-    topicKey = 0
-    topic = 0
-    flag = False
     info_dict = yaml.load(bag._get_yaml_info())
     topics =  info_dict['topics']
 
-    for key in range(len(topics)):
-        if topics[key]['topic'] == input_topic:
-            topicKey = key
+    try:
+        topic = [t for t in topics if t['topic'] == input_topic][0]
+        frequency = topic['frequency']
 
-    topic = topics[topicKey]
-    messages =  topic['messages']
-    duration = info_dict['duration']
-    topic_type = topic['type']
-    frequency = topic['frequency']
+    except ValueError:
+        print 'There is no topic with the specified name :: ',input_topic
 
-
-    #Checking if the topic is compressed
-    if 'CompressedImage' in topic_type:
-        compressed = True
-    else:
-        compressed = False
-
-    #Get framerate
-
-    bridge = CvBridge()
-    image_buff = []
-    time_buff = []
-    box_buff = []
-    counter = 0
-    buff_size = messages
-    #file_obj = open(feature_file, 'a')
-
+    points_buff = []
+    max_range = 0.0
+    frame_count =0
+    
     #Loop through the rosbag
-    for topic, msg, t in bag.read_messages(topics=[input_topic]):
+    for top, msg, t in bag.read_messages(topics=[input_topic]):
         #Get the scan
-        laserDistances.append(np.array(msg.ranges))
-        theta = np.arange(msg.angle_min, msg.angle_max + msg.angle_increment, msg.angle_increment)
-        theta = np.degrees(theta)
-        sx.append(np.cos(np.radians(theta)) * laserDistances[-1])
-        sy.append(np.sin(np.radians(theta)) * laserDistances[-1])
-    laserDistances = []
 
-#main
-def runMain(bag, bag_file,topic):
-    #args = parse_arguments()
-    #bag_file = args.input_file
-    #csv_file = args.csv_file
-    #output_file = args.output_file
-    #input_topic = args.scan_topic
-    #append = args.append
+        theta = np.arange(msg.angle_min, msg.angle_max, msg.angle_increment)
+        max_range = msg.range_max
 
-    #Create results file
-    feature_file = bag_file.split(".")[0].split("/")[-1] + "_RESULT"
+        
+        if frame_count < wall_limit:
+            wall_extract(msg.ranges,max_range)
 
-    if os.path.exists(feature_file) and not append:
-        os.remove(feature_file)
+        #convert wall from polar to cartesian
+        elif frame_count == wall_limit:
+            wall = (np.min(wall, axis=0))-0.1
+            wall_buff = pol2cart(wall, theta)
+        
+        else:
+            ranges = np.array(msg.ranges)
+            
+            filter = np.where(ranges < wall) 
+            # filter out walls
+            ranges = ranges[filter]
+            theta = theta[filter]
 
-    #Open bag and get framerate
-    play_bag_file(bag, topic)
-    gL.run(sx, sy, bag, bag_file)
+            C = pol2cart(ranges, theta)
 
+            points_buff.append(C)
+
+        frame_count = frame_count + 1
+
+        
+    return points_buff, wall_buff, msg.scan_time
+
+
+def wall_extract(laser_ranges, range_limit):
+    global wall
+
+    wall_scan = np.array(laser_ranges)
+    #get indexes of scans >= range_limit 
+    filter=np.where(wall_scan >= range_limit)
+
+    #set those scans to maximum range
+    wall_scan[filter] = range_limit
+
+
+    if wall is None:
+        wall = wall_scan
+    else:
+        wall = np.vstack((wall,wall_scan ))
+
+#convert polar coordinates to cartesian
+def pol2cart(r,theta):
+    x=np.multiply(r,np.cos(theta))
+    y=np.multiply(r,np.sin(theta))
+
+    C=np.array([x,y]).T
+    return C
+
+
+#Get the range data of the scanner, extract the walls of each scan and enable the <AutoScannerAnnotator> in order to produce the boxes autonomous.
+def runMain(bag, laser_info):
+    global frequency
+
+    points_buff, wall_buff, t = get_range_data(bag, laser_info.topic, laser_info.wall_limit)
+
+    convertPoints(points_buff, wall_buff, laser_info)
+
+    laser_info.time_increment = t
+
+    auto = AutoScannerAnnotator(points_buff, laser_info.myradius)
+    boxHandler = auto.cluster_procedure()
+
+    laser_info.boxHandler = boxHandler
+
+    return frequency
+
+#Store the points as a list of [points_x],[pointsY] for each scan
+def convertPoints(points_buff, wall_buff, laser_info):
+    for scan in points_buff:
+        x = [p[0] for p in scan]
+        y = [p[1] for p in scan]
+
+        la = LaserAnnotation(pointsX_=x, pointsY_=y)
+        laser_info.raw_data.append(la)
+
+    wX = []
+    wY = []
+    for wScan in wall_buff:
+        wX.append(wScan[0])
+        wY.append(wScan[1])
+
+    laser_info.walls = [wX, wY]
+
+
+#Better demostrastion of the X,Y points for each scan
+class LaserAnnotation:
+    def __init__(self, pointsX_=None, pointsY_=None):
+        if pointsX_ is None:
+            self.pointsX = []
+        else:
+            self.pointsX = pointsX_
+
+        if pointsY_ is None:
+            self.pointsY = pointsY_
+
+        else:
+            self.pointsY = pointsY_
