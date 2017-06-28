@@ -166,19 +166,21 @@ def onclick(event):
 class Window(FigureCanvas):
 
     def __init__(self, parent=None, width=15, height=2, dpi=100):
-        fig = Figure(figsize=(width, height), dpi=dpi)
-        self.axes = fig.add_subplot(111)
+        self.fig = Figure(figsize=(width, height), dpi=dpi)
+        self.axes = self.fig.add_subplot(111)
 
         #self.drawWave()
         self.drawAnnotations()
 
 
-        FigureCanvas.__init__(self, fig)
+        FigureCanvas.__init__(self, self.fig)
         #self.setParent(parent)
 
         FigureCanvas.setSizePolicy(self, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
         FigureCanvas.updateGeometry(self)
-        clickID = fig.canvas.mpl_connect('button_press_event', onclick)
+
+    def connectAll(self):
+        clickID = self.fig.canvas.mpl_connect('button_press_event', onclick)
         #clickID = fig.canvas.mpl_connect('motion_notify_event', onmotion)
 
     def drawWave(self):
@@ -251,6 +253,9 @@ class Waveform(Window):
         self.drawWave()
         self.drawAnnotations()
         self.draw()
+
+    def setConnections(self):
+        self.connectAll()
 
     # >> PLOT WAVEFORM
     #----------------------

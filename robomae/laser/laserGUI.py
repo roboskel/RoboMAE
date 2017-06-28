@@ -61,6 +61,11 @@ class PlotCanvas(FigureCanvas):
         self.canvas.setFocusPolicy( QtCore.Qt.ClickFocus )
         self.canvas.setFocus()
 
+        
+        plt.show()
+
+
+    def connectAll(self):
         #MouseEvent occurs
         self.canvas.mpl_connect('button_press_event', self.onPress)
         self.canvas.mpl_connect('button_release_event', self.onRelease)
@@ -70,8 +75,6 @@ class PlotCanvas(FigureCanvas):
         
 
         self.canvas.mpl_connect('draw_event', self.onDraw)
-        
-        plt.show()
     
     def onPress(self, event):
         if event.inaxes is None:
@@ -170,7 +173,7 @@ class PlotCanvas(FigureCanvas):
 
                         self.newBoxId.setGeometry(QRect(800, 100, 250, 100))
                         self.newBoxId.show()
-            
+                
     #When the user realeases the right click -> draw the final rectangle on the plot
     def onRelease(self, event):
         global current_rect
@@ -307,6 +310,9 @@ class LaserWidget(PlotCanvas):
 
     def setInfo(self, laser_info):
         self.laserCr = laser_info
+
+    def setConnections(self):
+        self.connectAll()
 
     def deleteAllBoxes(self):
         if not (self.rectangles == None):

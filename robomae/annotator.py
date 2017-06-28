@@ -988,6 +988,7 @@ class VideoPlayer(QWidget):
                         audio_player = True
                         audioGlobals.annotations = []
                         rosbagAudio.runMain(bag, str(fileName))
+                        self.wave.setConnections()
                     except:
                         self.errorMessages(6)
                     
@@ -1069,6 +1070,8 @@ class VideoPlayer(QWidget):
                         self.prevFrameButtonLaser.setEnabled(True)
                         self.nextFrameButtonLaser.setEnabled(True)
                         self.setBoxesButtonLaser.setEnabled(True)
+
+                        self.laserScan.setConnections()
 
                         laser_info.status = "Loaded"             
                     except:
@@ -1377,7 +1380,7 @@ class boundBox():
         
     #Handles the annotation for basic and high level classes
     def changeClass(self, boxid, classify):
-        if boxid in self.box_id:
+        if boxid < len(self.box_id):
             if classify in videoGlobals.classLabels:
                 self.annotation[boxid][0] = classify
             elif classify not in self.annotation[self.box_id.index(boxid)]:
